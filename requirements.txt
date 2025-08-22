@@ -1,0 +1,70 @@
+# Core ML/AI Dependencies
+torch==2.1.2
+intel-extension-for-pytorch==2.1.2
+transformers==4.36.2
+datasets==2.16.1
+accelerate==0.25.0
+peft==0.7.1
+bitsandbytes==0.42.0
+scipy==1.11.4
+numpy==1.24.4
+scikit-learn==1.3.2
+
+# Persian NLP and Text Processing
+spacy==3.7.2
+nltk==3.8.1
+hazm==0.7.0
+polyglot==16.7.4
+textblob==0.17.1
+gensim==4.3.2
+sentence-transformers==2.2.2
+
+# Data Collection and Processing
+requests==2.31.0
+beautifulsoup4==4.12.2
+scrapy==2.11.0
+selenium==4.16.0
+lxml==4.9.4
+pandas==2.1.4
+openpyxl==3.1.2
+
+# Web Interface and Monitoring
+streamlit==1.29.0
+plotly==5.17.0
+dash==2.16.1
+fastapi==0.105.0
+uvicorn==0.25.0
+gradio==4.12.0
+
+# System Optimization
+psutil==5.9.6
+memory-profiler==0.61.0
+py-cpuinfo==9.0.0
+nvidia-ml-py3==7.352.0
+mimalloc==2.0.9
+
+# Windows-specific
+pywin32==306
+wmi==1.5.1
+pypiwin32==223
+
+# Database and Storage
+sqlite3
+sqlalchemy==2.0.23
+redis==5.0.1
+pymongo==4.6.1
+
+# Utilities
+tqdm==4.66.1
+colorama==0.4.6
+python-dotenv==1.0.0
+pyyaml==6.0.1
+jsonschema==4.20.0
+click==8.1.7
+loguru==0.7.2
+
+# Development and Testing
+pytest==7.4.3
+black==23.12.0
+flake8==6.1.0
+mypy==1.8.0
