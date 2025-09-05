@@ -6,12 +6,13 @@ torch>=2.0.0
 transformers>=4.30.0
 peft>=0.4.0
 accelerate>=0.20.0
-datasets>=2.12.0
-tokenizers>=0.13.0
 
 # Persian NLP
 hazm>=0.7.0
-parsbert>=0.1.0
+# Note: ParsBERT models are available via Hugging Face transformers library
+# Use: from transformers import AutoTokenizer, AutoModel
+# tokenizer = AutoTokenizer.from_pretrained("HooshvareLab/bert-base-parsbert-uncased")
+# model = AutoModel.from_pretrained("HooshvareLab/bert-base-parsbert-uncased")
 
 # Quantization (Optional)
 bitsandbytes>=0.41.0
