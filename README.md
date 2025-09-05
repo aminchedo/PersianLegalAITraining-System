@@ -1,342 +1,430 @@
-# Advanced Persian Legal AI Training System - 2025 Edition
+# 🚀 Persian Legal AI Training System
 
-⚖️ **The most advanced Persian Legal AI training system with DoRA, QR-Adaptor, and Intel CPU optimization**
+A production-grade AI model training system optimized for Persian legal document processing with maximum system utilization on 24-core Intel systems.
 
-## 🌟 Features
+## 📋 System Overview
 
-### 🚀 Latest 2025 AI Techniques
-- **DoRA (Weight-Decomposed Low-Rank Adaptation)**: Magnitude and direction decomposition with separate learning rates
-- **QR-Adaptor**: Joint bit-width and rank optimization with adaptive quantization
-- **Advanced QLoRA with NF4**: 4-bit NormalFloat quantization with double quantization
-- **AdaLoRA Implementation**: SVD-based dynamic rank allocation with importance scoring
+This system implements advanced AI training techniques including DoRA (Weight-Decomposed Low-Rank Adaptation), QR-Adaptor with adaptive quantization, and real-time Persian legal data processing from multiple sources.
 
-### 🖥️ Windows VPS Optimization
-- **Intel Extension for PyTorch 2025**: Full integration with AMX and AVX-512 support
-- **NUMA-Aware Processing**: 24-core CPU thread affinity management
-- **Windows-Specific Optimizations**: mimalloc, large pages, and high-priority processing
-- **Automatic CPU Detection**: Physical core utilization with hyperthreading awareness
+### 🎯 Key Features
 
-### 📚 Real Persian Legal Data
-- **Naab Corpus**: 700GB Persian text corpus (13.3M paragraphs, 7.6B words)
-- **Iran Data Portal**: Syracuse University legal document collection
-- **Qavanin Portal**: Official Iranian laws and regulations database
-- **Majles Website**: Iranian Parliament official documents
-- **Advanced Text Processing**: spaCy, NLTK, and custom Persian regex patterns
+- **DoRA Training**: Advanced weight decomposition with magnitude/direction optimization
+- **QR-Adaptor**: Joint quantization and rank optimization for memory efficiency
+- **Intel CPU Optimization**: Maximum utilization of 24-core systems with NUMA awareness
+- **Real Data Integration**: Live connections to Persian legal databases
+- **Real-time Monitoring**: WebSocket-based training progress tracking
+- **Production Ready**: Comprehensive error handling, checkpointing, and recovery
 
-### 🎛️ Production Web Interface
-- **Persian RTL Support**: Full right-to-left layout with Persian fonts
-- **Real-time Monitoring**: Live system metrics and training progress
-- **Mobile Responsive**: Optimized for remote monitoring
-- **Interactive Controls**: One-click training and data collection management
+## 🏗️ Architecture
 
-### 📊 Comprehensive Monitoring
-- **Windows Event Log Integration**: System alerts and performance tracking
-- **24/7 Operation**: Automated training management with intelligent checkpointing
-- **Performance Analytics**: CPU, memory, and training throughput monitoring
-- **Alert System**: Configurable thresholds with automatic notifications
+```
+persian-legal-ai/
+├── backend/
+│   ├── models/
+│   │   ├── dora_trainer.py          # DoRA implementation
+│   │   ├── qr_adaptor.py            # Quantization & rank optimization
+│   │   ├── model_manager.py         # Central model management
+│   │   └── persian_models.py        # Persian model loader
+│   ├── services/
+│   │   ├── training_service.py      # Training orchestration
+│   │   └── persian_data_processor.py # Data processing pipeline
+│   ├── optimization/
+│   │   ├── intel_optimizer.py       # Intel CPU optimization
+│   │   ├── system_optimizer.py      # System-wide optimization
+│   │   └── memory_optimizer.py      # Memory optimization
+│   ├── database/
+│   │   ├── models.py                # Database models
+│   │   └── connection.py            # Database manager
+│   ├── api/
+│   │   ├── training_endpoints.py    # Training API
+│   │   ├── model_endpoints.py       # Model management API
+│   │   └── system_endpoints.py      # System monitoring API
+│   └── main.py                      # FastAPI server
+├── frontend/
+│   ├── src/
+│   │   ├── api/
+│   │   │   └── persian-ai-api.js    # Enhanced API client
+│   │   ├── hooks/
+│   │   │   └── useTrainingSession.js # Training hooks
+│   │   └── components/              # React components
+└── docs/                            # Documentation
+```
 
-## 🛠️ Installation
+## 🚀 Quick Start
 
 ### Prerequisites
 
-- **Windows Server 2019/2022** or **Windows 10/11 Pro**
-- **24-core CPU** (Intel Xeon recommended)
-- **32-64GB RAM**
-- **500GB+ SSD storage**
-- **Python 3.9+**
-- **Administrator privileges**
+- Python 3.9+
+- Node.js 16+
+- 24-core Intel CPU (recommended)
+- 64GB RAM (minimum)
+- Intel Extension for PyTorch
 
-### Quick Installation
+### Installation
 
-1. **Clone the repository**:
+1. **Clone the repository**
 ```bash
-git clone https://github.com/your-repo/persian-legal-ai.git
+git clone <repository-url>
 cd persian-legal-ai
 ```
 
-2. **Install dependencies**:
+2. **Setup Backend**
 ```bash
+cd backend
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-3. **Install Intel Extension for PyTorch**:
+3. **Setup Frontend**
 ```bash
-pip install intel-extension-for-pytorch
+cd frontend
+npm install
 ```
 
-4. **Download Persian NLP models**:
+4. **Configure Environment**
 ```bash
-python -c "import spacy; spacy.cli.download('xx_ent_wiki_sm')"
-python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords')"
+cp .env.example .env
+# Edit .env with your configuration
 ```
 
-5. **Initialize the system**:
+### Running the System
+
+1. **Start Backend Server**
 ```bash
+cd backend
+source venv/bin/activate
 python main.py
 ```
 
-### Advanced Installation
-
-For production deployment with Windows Service:
-
-1. **Run as Administrator** and install the service:
+2. **Start Frontend Dashboard**
 ```bash
-python services/windows_service.py install
+cd frontend
+npm start
 ```
 
-2. **Start the service**:
+3. **Access the System**
+- Dashboard: http://localhost:3000
+- API Documentation: http://localhost:8000/docs
+- System Health: http://localhost:8000/api/system/health
+
+## 🧠 Core Components
+
+### DoRA Trainer (`backend/models/dora_trainer.py`)
+
+Advanced weight decomposition implementation:
+
+```python
+from backend.models.dora_trainer import DoRATrainer
+
+# Initialize DoRA trainer
+trainer = DoRATrainer({
+    'base_model': 'universitytehran/PersianMind-v1.0',
+    'dora_rank': 64,
+    'dora_alpha': 16.0,
+    'target_modules': ["q_proj", "v_proj", "k_proj", "o_proj"]
+})
+
+# Load and optimize model
+model, tokenizer = trainer.load_model()
+trainer.setup_optimizers(learning_rate=1e-4)
+
+# Training step
+metrics = trainer.train_step(batch)
+```
+
+### QR-Adaptor (`backend/models/qr_adaptor.py`)
+
+Joint quantization and rank optimization:
+
+```python
+from backend.models.qr_adaptor import QRAdaptor, QuantizationConfig, RankConfig
+
+# Configure quantization and rank optimization
+quantization_config = QuantizationConfig(
+    quant_type=QuantizationType.NF4,
+    adaptive_bits=True,
+    compression_target=0.5
+)
+
+rank_config = RankConfig(
+    adaptive_rank=True,
+    min_rank=16,
+    max_rank=256
+)
+
+# Initialize QR-Adaptor
+qr_adaptor = QRAdaptor(quantization_config, rank_config)
+
+# Apply optimizations
+model = qr_adaptor.apply_quantization(model)
+model = qr_adaptor.optimize_ranks(model, gradients)
+```
+
+### Intel CPU Optimizer (`backend/optimization/intel_optimizer.py`)
+
+Maximum CPU utilization for 24-core systems:
+
+```python
+from backend.optimization.intel_optimizer import IntelCPUOptimizer, CPUConfig
+
+# Configure CPU optimization
+cpu_config = CPUConfig(
+    physical_cores=24,
+    logical_cores=48,
+    enable_intel_extension=True,
+    numa_aware=True
+)
+
+# Initialize optimizer
+optimizer = IntelCPUOptimizer(cpu_config)
+
+# Optimize model for CPU
+model = optimizer.optimize_model_for_cpu(model)
+
+# Enable mixed precision
+mixed_precision_config = optimizer.enable_mixed_precision_cpu()
+```
+
+### Persian Data Processor (`backend/services/persian_data_processor.py`)
+
+Real-time Persian legal data processing:
+
+```python
+from backend.services.persian_data_processor import PersianLegalDataProcessor
+
+# Initialize data processor
+processor = PersianLegalDataProcessor()
+
+# Fetch legal documents
+documents = await processor.fetch_legal_documents(
+    sources=['naab', 'qavanin', 'majles'],
+    date_range=(start_date, end_date),
+    categories=['laws', 'regulations']
+)
+
+# Preprocess Persian text
+processed_docs = processor.preprocess_persian_text(documents)
+
+# Create training datasets
+qa_dataset = processor.create_training_datasets(
+    processed_docs, 'question_answering'
+)
+```
+
+## 📊 API Endpoints
+
+### Training Management
+
+- `POST /api/training/sessions` - Create training session
+- `GET /api/training/sessions/{session_id}/status` - Get training status
+- `GET /api/training/sessions/{session_id}/metrics` - Get training metrics
+- `POST /api/training/sessions/{session_id}/control` - Control training (pause/resume/cancel)
+- `GET /api/training/sessions` - List training sessions
+
+### Model Management
+
+- `GET /api/models/` - List registered models
+- `POST /api/models/register` - Register new model
+- `GET /api/models/{model_id}` - Get model details
+- `POST /api/models/{model_id}/evaluate` - Evaluate model
+
+### System Monitoring
+
+- `GET /api/system/health` - System health check
+- `GET /api/system/metrics` - System metrics
+- `GET /api/system/performance` - Performance overview
+- `POST /api/system/optimize` - Optimize system
+
+### WebSocket Endpoints
+
+- `ws://localhost:8000/api/training/ws/training/{session_id}` - Real-time training monitoring
+
+## 🔧 Configuration
+
+### Environment Variables
+
 ```bash
-python services/windows_service.py start
-```
+# Database
+DATABASE_URL=postgresql://user:password@localhost/persian_ai
+# or for SQLite
+SQLITE_PATH=persian_legal_ai.db
 
-3. **Access the web dashboard**:
-```
-http://localhost:8501
-```
+# Data Sources
+NAAB_API_KEY=your_naab_api_key
+QAVANIN_BASE_URL=https://qavanin.ir
+MAJLES_BASE_URL=https://majlis.ir
 
-## ⚙️ Configuration
+# System Optimization
+CPU_CORES=24
+MEMORY_LIMIT_GB=64
+ENABLE_INTEL_EXTENSION=true
+NUMA_AWARE=true
+
+# Training
+MAX_CONCURRENT_SESSIONS=2
+DEFAULT_BATCH_SIZE=4
+DEFAULT_LEARNING_RATE=1e-4
+```
 
 ### Training Configuration
 
-Edit `config/training_config.py` or create a YAML configuration file:
-
-```yaml
-dora:
-  rank: 64
-  alpha: 16.0
-  enable_decomposition: true
-  magnitude_learning_rate: 1e-4
-  direction_learning_rate: 1e-3
-
-qr_adaptor:
-  quantization_bits:
-    critical_layers: 4
-    standard_layers: 8
-    less_critical_layers: 16
-  adaptive_rank: true
-  use_nf4: true
-
-windows_optimization:
-  cpu_cores: 24
-  numa_aware: true
-  enable_ipex: true
-  enable_amx: true
-  enable_avx512: true
-  use_mimalloc: true
-  enable_large_pages: true
+```python
+training_config = {
+    "model_name": "PersianMind-v1.0",
+    "model_type": "dora",
+    "base_model": "universitytehran/PersianMind-v1.0",
+    "dataset_sources": ["naab", "qavanin"],
+    "training_config": {
+        "epochs": 10,
+        "batch_size": 4,
+        "learning_rate": 1e-4,
+        "weight_decay": 0.01,
+        "gradient_accumulation_steps": 2
+    },
+    "model_config": {
+        "dora_rank": 64,
+        "dora_alpha": 16.0,
+        "target_modules": ["q_proj", "v_proj", "k_proj", "o_proj"]
+    }
+}
 ```
 
-### Data Collection Sources
+## 📈 Performance Optimization
 
-The system connects to these verified Persian legal data sources:
+### Intel CPU Optimization
 
-- **Naab Corpus**: `https://www.naab.ir/corpus`
-- **Iran Data Portal**: `https://irandataportal.syr.edu/laws-and-regulations`
-- **Qavanin Portal**: `https://qavanin.ir/`
-- **Majles Website**: `https://majles.ir/`
+The system automatically detects and optimizes for Intel CPUs:
 
-## 🚀 Usage
+- **Intel Extension for PyTorch**: Automatic optimization when available
+- **NUMA Awareness**: Memory allocation optimization for multi-socket systems
+- **Thread Affinity**: Optimal thread binding to physical cores
+- **AMX/AVX-512**: Automatic detection and utilization of advanced instruction sets
 
-### Command Line Interface
+### Memory Optimization
+
+- **Gradient Checkpointing**: Reduces memory usage during training
+- **Mixed Precision**: FP16 training for memory efficiency
+- **Memory Pooling**: Efficient memory allocation and reuse
+- **Automatic Cleanup**: Background memory management
+
+### System Monitoring
+
+Real-time monitoring of:
+- CPU utilization per core
+- Memory usage and optimization
+- Training progress and metrics
+- System health and performance
+
+## 🗄️ Database Schema
+
+### Training Sessions
+- Session management and tracking
+- Progress monitoring
+- Error handling and recovery
+
+### Model Checkpoints
+- Automatic checkpointing
+- Best model tracking
+- Version management
+
+### Training Metrics
+- Real-time metrics collection
+- Performance analysis
+- Historical data
+
+## 🔍 Monitoring and Logging
+
+### Real-time Monitoring
+- WebSocket-based live updates
+- Training progress visualization
+- System performance metrics
+
+### Logging
+- Comprehensive logging system
+- Structured log format
+- Error tracking and debugging
+
+### Health Checks
+- System component health
+- Database connectivity
+- Resource utilization
+
+## 🚀 Deployment
+
+### Docker Deployment
 
 ```bash
-# Start training
-python main.py
-
-# Run with custom configuration
-python main.py --config config.yaml
-
-# Run as Windows service
-python services/windows_service.py install
-python services/windows_service.py start
+# Build and run with Docker Compose
+docker-compose up -d
 ```
 
-### Web Dashboard
+### Production Deployment
 
-1. **Start the Streamlit dashboard**:
 ```bash
-streamlit run interface/streamlit_dashboard.py
+# Use the provided deployment script
+./scripts/production_deploy.sh
 ```
 
-2. **Access the interface**:
-```
-http://localhost:8501
-```
+### System Requirements
 
-3. **Available features**:
-   - Real-time system monitoring
-   - Training control and progress tracking
-   - Data collection management
-   - Persian text processing pipeline
-   - Model performance analytics
+**Minimum:**
+- 16-core CPU
+- 32GB RAM
+- 100GB storage
 
-### API Usage
+**Recommended:**
+- 24-core Intel CPU
+- 64GB RAM
+- 500GB SSD storage
+- Intel Extension for PyTorch
 
-```python
-from main import PersianLegalAISystem
-import asyncio
+## 🧪 Testing
 
-async def main():
-    # Initialize system
-    ai_system = PersianLegalAISystem()
-    
-    # Initialize all components
-    await ai_system.initialize_system()
-    
-    # Start training
-    await ai_system.start_training({
-        'learning_rate': 1e-4,
-        'batch_size': 4,
-        'num_epochs': 3
-    })
+```bash
+# Run backend tests
+cd backend
+pytest tests/
 
-asyncio.run(main())
+# Run frontend tests
+cd frontend
+npm test
 ```
 
-## 🔧 Advanced Features
+## 📚 Documentation
 
-### DoRA Training
-
-```python
-from models.dora_trainer import DoRATrainer
-
-# Initialize DoRA trainer
-trainer = DoRATrainer(
-    model_name="universitytehran/PersianMind-v1.0",
-    rank=64,
-    alpha=16.0,
-    enable_decomposition=True
-)
-
-# Start training with magnitude/direction decomposition
-await trainer.start_training({
-    'learning_rate': 1e-4,
-    'magnitude_learning_rate': 1e-4,
-    'direction_learning_rate': 1e-3
-})
-```
-
-### QR-Adaptor Optimization
-
-```python
-from models.qr_adaptor import QRAdaptor
-
-# Initialize QR-Adaptor
-qr_adaptor = QRAdaptor(
-    base_model="HooshvareLab/bert-base-parsbert-uncased",
-    quantization_bits={'standard_layers': 8},
-    adaptive_rank=True
-)
-
-# Start joint optimization
-await qr_adaptor.start_optimization({
-    'optimization_steps': 1000
-})
-```
-
-### Persian Data Collection
-
-```python
-from data.persian_legal_collector import PersianLegalDataCollector
-
-# Initialize data collector
-collector = PersianLegalDataCollector(
-    max_workers=8,
-    enable_caching=True
-)
-
-# Start collection from all sources
-await collector.start_collection()
-
-# Get collected documents
-documents = collector.get_documents(limit=100, min_quality=0.7)
-```
-
-## 📊 Monitoring and Analytics
-
-### System Metrics
-
-The system provides comprehensive monitoring:
-
-- **CPU Usage**: Per-core utilization with Intel optimizations
-- **Memory Usage**: RAM and virtual memory tracking
-- **Training Progress**: Loss, learning rate, and throughput
-- **DoRA Metrics**: Magnitude/direction decomposition ratios
-- **QR-Adaptor Metrics**: Compression ratios and quantization efficiency
-
-### Performance Optimization
-
-Automatic optimizations include:
-
-- **CPU Affinity**: Bind processes to physical cores
-- **NUMA Awareness**: Optimize memory access patterns
-- **Intel Extensions**: AMX and AVX-512 acceleration
-- **Memory Optimization**: Large pages and mimalloc
-- **Process Priority**: High-priority scheduling
-
-## 🔐 Security and Reliability
-
-### Windows Service Features
-
-- **Automatic Startup**: Starts with Windows
-- **Failure Recovery**: Automatic restart on crashes
-- **Event Log Integration**: Windows Event Viewer logging
-- **Service Management**: Easy install/uninstall/restart
-
-### Data Security
-
-- **Input Validation**: Sanitized data processing
-- **Error Handling**: Comprehensive exception management
-- **Backup Systems**: Automated model checkpoints
-- **Graceful Degradation**: Fallback mechanisms
-
-## 📈 Performance Benchmarks
-
-### Expected Performance (24-core Windows VPS)
-
-- **Training Throughput**: 100+ tokens/second
-- **CPU Utilization**: 85%+ during training
-- **Memory Efficiency**: Support for 32-64GB constraints
-- **Model Compression**: 10-50x with QR-Adaptor
-- **Data Processing**: 1000+ documents/hour
-
-### Optimization Results
-
-- **DoRA vs LoRA**: 15-30% better parameter efficiency
-- **QR-Adaptor**: 10-50x compression with minimal accuracy loss
-- **Intel Extensions**: 20-40% CPU performance improvement
-- **Windows Optimizations**: 10-20% overall system performance boost
+- [API Documentation](http://localhost:8000/docs) - Interactive API docs
+- [Training Guide](docs/training-guide.md) - Detailed training instructions
+- [System Architecture](docs/architecture.md) - System design overview
+- [Performance Tuning](docs/performance.md) - Optimization guidelines
 
 ## 🤝 Contributing
-
-We welcome contributions to improve the Persian Legal AI system:
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Add tests and documentation
+4. Add tests
 5. Submit a pull request
 
-## 📝 License
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
-
-- **Intel Corporation**: Intel Extension for PyTorch
-- **University of Tehran**: PersianMind model
-- **HooshvareLab**: ParsBERT models
-- **Syracuse University**: Iran Data Portal
-- **Persian NLP Community**: Hazm and other tools
-
-## 📞 Support
+## 🆘 Support
 
 For support and questions:
+- Create an issue on GitHub
+- Check the documentation
+- Review the API documentation at `/docs`
 
-- **Documentation**: [Wiki](https://github.com/your-repo/persian-legal-ai/wiki)
-- **Issues**: [GitHub Issues](https://github.com/your-repo/persian-legal-ai/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-repo/persian-legal-ai/discussions)
+## 🎯 Roadmap
+
+- [ ] Multi-GPU support
+- [ ] Advanced data augmentation
+- [ ] Model serving infrastructure
+- [ ] Advanced monitoring dashboard
+- [ ] Automated hyperparameter tuning
 
 ---
 
-**Persian Legal AI Training System** - Advancing Persian language AI with cutting-edge 2025 techniques 🚀
+**Built with ❤️ for Persian Legal AI**
