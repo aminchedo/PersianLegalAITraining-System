@@ -1,11 +1,18 @@
-"""
-Persian Legal AI Models Package
-بسته مدل‌های هوش مصنوعی حقوقی فارسی
-"""
+# Database models for Persian Legal AI System
+from .user_model import User
+from .team_model import TeamMember
+from .model_training import ModelTraining
+from .system_metrics import SystemMetrics
+from .analytics_data import AnalyticsData
+from .legal_document import LegalDocument
+from .training_job import TrainingJob
 
-from .dora_trainer import DoRATrainer
-from .qr_adaptor import QRAdaptor
-from .model_manager import ModelManager
-from .persian_models import PersianModelLoader
-
-__all__ = ['DoRATrainer', 'QRAdaptor', 'ModelManager', 'PersianModelLoader']
+__all__ = [
+    'User',
+    'TeamMember', 
+    'ModelTraining',
+    'SystemMetrics',
+    'AnalyticsData',
+    'LegalDocument',
+    'TrainingJob'
+]

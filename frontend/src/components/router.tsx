@@ -1,10 +1,25 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Brain, Database, Activity, BarChart3, FileText, Terminal, Users, Settings, Home } from 'lucide-react';
+import { useRealTeamData, useRealModelData, useRealSystemStats, useApiConnection } from '../hooks/useRealData';
 
 // Context for global state management
-const AppContext = createContext();
+interface AppContextType {
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
+  sidebarCollapsed: boolean;
+  setSidebarCollapsed: (collapsed: boolean) => void;
+  autoRefresh: boolean;
+  setAutoRefresh: (refresh: boolean) => void;
+  refreshInterval: number;
+  setRefreshInterval: (interval: number) => void;
+  isConnected: boolean | null;
+  connectionTesting: boolean;
+  testConnection: () => void;
+}
 
-export const useAppContext = () => {
+const AppContext = createContext<AppContextType | undefined>(undefined);
+
+export const useAppContext = (): AppContextType => {
   const context = useContext(AppContext);
   if (!context) {
     throw new Error('useAppContext must be used within AppProvider');
@@ -12,315 +27,369 @@ export const useAppContext = () => {
   return context;
 };
 
-// Mock data generators
-const generateMetrics = (count = 50) => {
-  return Array.from({ length: count }, (_, i) => ({
-    time: new Date(Date.now() - (count - i) * 60000).toLocaleTimeString('fa-IR'),
-    cpu: Math.random() * 80 + 10,
-    memory: Math.random() * 60 + 20,
-    gpu: Math.random() * 90 + 5,
-    loss: Math.exp(-i/30) * (1 + Math.random() * 0.3),
-    accuracy: 50 + i * 0.9 + Math.random() * 5,
-    throughput: 80 + Math.random() * 40,
-    temperature: 35 + Math.random() * 20,
-    power: 150 + Math.random() * 100
-  }));
-};
-
-// Global state provider
-export const AppProvider = ({ children }) => {
+// Global state provider with real data
+export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [realTimeData, setRealTimeData] = useState(generateMetrics());
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [refreshInterval, setRefreshInterval] = useState(3000);
   
-  const [projects] = useState([
-    { id: 'legal-2025', name: 'پروژه اسناد حقوقی 2025', status: 'active', progress: 67 },
-    { id: 'criminal-ai', name: 'هوش مصنوعی حقوق جزا', status: 'completed', progress: 100 },
-    { id: 'civil-qa', name: 'سیستم Q&A حقوق مدنی', status: 'pending', progress: 23 }
-  ]);
+  // Real data hooks
+  const { isConnected, testing: connectionTesting, testConnection } = useApiConnection();
   
-  const [selectedProject, setSelectedProject] = useState('legal-2025');
-  
-  const [models, setModels] = useState([
-    { 
-      id: 1, 
-      name: "PersianMind-v1.0", 
-      status: "training", 
-      progress: 67, 
-      accuracy: 89.2,
-      loss: 0.23,
-      epochs: 8,
-      timeRemaining: "2 ساعت 15 دقیقه",
-      doraRank: 64,
-      type: "language-model",
-      description: "مدل پیشرفته زبان فارسی برای درک متون حقوقی",
-      parameters: "7B",
-      framework: "PyTorch",
-      lastUpdated: new Date()
-    },
-    { 
-      id: 2, 
-      name: "ParsBERT-Legal", 
-      status: "completed", 
-      progress: 100, 
-      accuracy: 92.5,
-      loss: 0.15,
-      epochs: 12,
-      timeRemaining: "تکمیل شده",
-      doraRank: 32,
-      type: "bert-model",
-      description: "مدل BERT تخصصی برای اسناد حقوقی",
-      parameters: "110M",
-      framework: "Transformers",
-      lastUpdated: new Date(Date.now() - 86400000)
-    },
-    { 
-      id: 3, 
-      name: "Persian-QA-Advanced", 
-      status: "pending", 
-      progress: 0, 
-      accuracy: 0,
-      loss: 0,
-      epochs: 0,
-      timeRemaining: "در انتظار",
-      doraRank: 128,
-      type: "qa-model",
-      description: "سیستم پرسش و پاسخ پیشرفته",
-      parameters: "3B",
-      framework: "PyTorch",
-      lastUpdated: new Date()
-    },
-    { 
-      id: 4, 
-      name: "Legal-NER-v2", 
-      status: "error", 
-      progress: 45, 
-      accuracy: 67.8,
-      loss: 0.45,
-      epochs: 3,
-      timeRemaining: "خطا در آموزش",
-      doraRank: 64,
-      type: "ner-model",
-      description: "شناسایی موجودیت‌های حقوقی",
-      parameters: "340M",
-      framework: "spaCy",
-      lastUpdated: new Date()
-    }
-  ]);
-
-  const [dataSources] = useState([
-    { 
-      id: 1,
-      name: "پیکره نعب", 
-      documents: 15420, 
-      quality: 94, 
-      status: "active", 
-      speed: 125,
-      type: "corpus",
-      description: "پیکره جامع متون حقوقی فارسی",
-      lastSync: new Date()
-    },
-    { 
-      id: 2,
-      name: "پورتال قوانین", 
-      documents: 8932, 
-      quality: 87, 
-      status: "active", 
-      speed: 89,
-      type: "legal-portal",
-      description: "قوانین و مقررات جمهوری اسلامی ایران",
-      lastSync: new Date()
-    },
-    { 
-      id: 3,
-      name: "مجلس شورای اسلامی", 
-      documents: 5673, 
-      quality: 92, 
-      status: "active", 
-      speed: 67,
-      type: "parliament",
-      description: "لوایح و قوانین مصوب مجلس",
-      lastSync: new Date()
-    },
-    { 
-      id: 4,
-      name: "پورتال داده ایران", 
-      documents: 3241, 
-      quality: 78, 
-      status: "inactive", 
-      speed: 0,
-      type: "data-portal",
-      description: "داده‌های باز دولتی",
-      lastSync: new Date(Date.now() - 172800000)
-    }
-  ]);
-
-  const [notifications, setNotifications] = useState([
-    { 
-      id: 1, 
-      type: 'success', 
-      title: 'آموزش تکمیل شد',
-      message: 'مدل ParsBERT-Legal با دقت 92.5% آموزش داده شد', 
-      time: new Date(Date.now() - 2 * 60000),
-      read: false 
-    },
-    { 
-      id: 2, 
-      type: 'warning', 
-      title: 'هشدار عملکرد',
-      message: 'استفاده از CPU به 85% رسیده - بهینه‌سازی توصیه می‌شود', 
-      time: new Date(Date.now() - 5 * 60000),
-      read: false 
-    },
-    { 
-      id: 3, 
-      type: 'info', 
-      title: 'جمع‌آوری داده',
-      message: 'جمع‌آوری 1,247 سند جدید از پیکره نعب', 
-      time: new Date(Date.now() - 10 * 60000),
-      read: true 
-    }
-  ]);
-
-  const [systemLogs, setSystemLogs] = useState([
-    { id: 1, level: 'INFO', message: 'سیستم با موفقیت راه‌اندازی شد', timestamp: new Date(Date.now() - 1000), component: 'main' },
-    { id: 2, level: 'SUCCESS', message: 'اتصال به پیکره نعب برقرار شد', timestamp: new Date(Date.now() - 2000), component: 'data-collector' },
-    { id: 3, level: 'WARNING', message: 'استفاده از حافظه به 78% رسید', timestamp: new Date(Date.now() - 3000), component: 'monitor' },
-    { id: 4, level: 'INFO', message: 'شروع آموزش مدل PersianMind-v1.0', timestamp: new Date(Date.now() - 4000), component: 'trainer' },
-    { id: 5, level: 'ERROR', message: 'خطا در بارگیری مدل Legal-NER-v2', timestamp: new Date(Date.now() - 5000), component: 'model-loader' }
-  ]);
-
-  const [teamMembers] = useState([
-    {
-      id: 1,
-      name: "علی احمدی",
-      role: "مدیر پروژه",
-      email: "ali.ahmadi@example.com",
-      avatar: "AA",
-      status: "online",
-      projects: ["legal-2025", "criminal-ai"],
-      permissions: ["admin", "model-training", "data-access"]
-    },
-    {
-      id: 2,
-      name: "فاطمه کریمی",
-      role: "مهندس یادگیری ماشین",
-      email: "fateme.karimi@example.com",
-      avatar: "FK",
-      status: "online",
-      projects: ["legal-2025"],
-      permissions: ["model-training", "data-access"]
-    },
-    {
-      id: 3,
-      name: "محمد رضایی",
-      role: "متخصص داده",
-      email: "mohammad.rezaei@example.com",
-      avatar: "MR",
-      status: "away",
-      projects: ["civil-qa"],
-      permissions: ["data-access", "data-annotation"]
-    }
-  ]);
-
-  // Real-time data updates
-  useEffect(() => {
-    if (!autoRefresh) return;
-
-    const interval = setInterval(() => {
-      setRealTimeData(prev => {
-        const newPoint = {
-          time: new Date().toLocaleTimeString('fa-IR'),
-          cpu: Math.random() * 80 + 10,
-          memory: Math.random() * 60 + 20,
-          gpu: Math.random() * 90 + 5,
-          loss: Math.random() * 0.5 + 0.1,
-          accuracy: 85 + Math.random() * 10,
-          throughput: 80 + Math.random() * 40,
-          temperature: 35 + Math.random() * 20,
-          power: 150 + Math.random() * 100
-        };
-        return [...prev.slice(1), newPoint];
-      });
-
-      // Add new logs occasionally
-      if (Math.random() < 0.1) {
-        const newLog = {
-          id: Date.now(),
-          level: ['INFO', 'WARNING', 'ERROR', 'SUCCESS'][Math.floor(Math.random() * 4)],
-          message: [
-            'عملیات بک‌آپ تکمیل شد',
-            'بررسی سلامت سیستم انجام شد',
-            'آپدیت مدل جدید اعمال شد',
-            'تنظیمات امنیتی بروزرسانی شد'
-          ][Math.floor(Math.random() * 4)],
-          timestamp: new Date(),
-          component: ['main', 'backup', 'model-manager', 'security'][Math.floor(Math.random() * 4)]
-        };
-        setSystemLogs(prev => [newLog, ...prev.slice(0, 49)]);
-      }
-    }, refreshInterval);
-
-    return () => clearInterval(interval);
-  }, [autoRefresh, refreshInterval]);
-
-  const value = {
-    // Navigation
+  const contextValue: AppContextType = {
     activeTab,
     setActiveTab,
     sidebarCollapsed,
     setSidebarCollapsed,
-    
-    // Data
-    realTimeData,
-    setRealTimeData,
-    projects,
-    selectedProject,
-    setSelectedProject,
-    models,
-    setModels,
-    dataSources,
-    notifications,
-    setNotifications,
-    systemLogs,
-    setSystemLogs,
-    teamMembers,
-    
-    // Settings
     autoRefresh,
     setAutoRefresh,
     refreshInterval,
-    setRefreshInterval
+    setRefreshInterval,
+    isConnected,
+    connectionTesting,
+    testConnection
   };
 
   return (
-    <AppContext.Provider value={value}>
+    <AppContext.Provider value={contextValue}>
       {children}
     </AppContext.Provider>
   );
 };
 
-// Simple Router Component
-export const Router = ({ children }) => {
+// Navigation items
+const navigationItems = [
+  { id: 'dashboard', label: 'Dashboard', icon: Home },
+  { id: 'team', label: 'Team', icon: Users },
+  { id: 'models', label: 'Models', icon: Brain },
+  { id: 'monitoring', label: 'Monitoring', icon: Activity },
+  { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+  { id: 'data', label: 'Data', icon: Database },
+  { id: 'logs', label: 'Logs', icon: Terminal },
+  { id: 'settings', label: 'Settings', icon: Settings },
+];
+
+// Sidebar component
+export const Sidebar: React.FC = () => {
+  const { activeTab, setActiveTab, sidebarCollapsed, setSidebarCollapsed, isConnected } = useAppContext();
+
+  return (
+    <div className={`bg-gray-900 text-white transition-all duration-300 ${
+      sidebarCollapsed ? 'w-16' : 'w-64'
+    }`}>
+      <div className="p-4">
+        <div className="flex items-center justify-between">
+          {!sidebarCollapsed && (
+            <h1 className="text-xl font-bold">Persian Legal AI</h1>
+          )}
+          <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+          >
+            <Settings className="h-5 w-5" />
+          </button>
+        </div>
+        
+        {!sidebarCollapsed && (
+          <div className="mt-4 flex items-center space-x-2">
+            <div className={`w-2 h-2 rounded-full ${
+              isConnected === true ? 'bg-green-500' : 
+              isConnected === false ? 'bg-red-500' : 'bg-yellow-500'
+            }`}></div>
+            <span className="text-sm text-gray-300">
+              {isConnected === true ? 'Connected' : 
+               isConnected === false ? 'Disconnected' : 'Connecting...'}
+            </span>
+          </div>
+        )}
+      </div>
+
+      <nav className="mt-6">
+        {navigationItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`w-full flex items-center px-4 py-3 text-left hover:bg-gray-800 transition-colors ${
+                activeTab === item.id ? 'bg-gray-800 border-r-2 border-blue-500' : ''
+              }`}
+            >
+              <Icon className="h-5 w-5 flex-shrink-0" />
+              {!sidebarCollapsed && (
+                <span className="ml-3">{item.label}</span>
+              )}
+            </button>
+          );
+        })}
+      </nav>
+    </div>
+  );
+};
+
+// Header component
+export const Header: React.FC = () => {
+  const { autoRefresh, setAutoRefresh, refreshInterval, setRefreshInterval, testConnection, connectionTesting } = useAppContext();
+
+  return (
+    <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-semibold text-gray-900">Persian Legal AI System</h2>
+          <p className="text-sm text-gray-600">Real-time monitoring and management</p>
+        </div>
+        
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <label className="text-sm text-gray-600">Auto Refresh:</label>
+            <input
+              type="checkbox"
+              checked={autoRefresh}
+              onChange={(e) => setAutoRefresh(e.target.checked)}
+              className="rounded"
+            />
+          </div>
+          
+          {autoRefresh && (
+            <div className="flex items-center space-x-2">
+              <label className="text-sm text-gray-600">Interval:</label>
+              <select
+                value={refreshInterval}
+                onChange={(e) => setRefreshInterval(Number(e.target.value))}
+                className="border border-gray-300 rounded px-2 py-1 text-sm"
+              >
+                <option value={1000}>1s</option>
+                <option value={3000}>3s</option>
+                <option value={5000}>5s</option>
+                <option value={10000}>10s</option>
+                <option value={30000}>30s</option>
+              </select>
+            </div>
+          )}
+          
+          <button
+            onClick={testConnection}
+            disabled={connectionTesting}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
+          >
+            {connectionTesting ? 'Testing...' : 'Test Connection'}
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+};
+
+// Main content area
+export const MainContent: React.FC = () => {
   const { activeTab } = useAppContext();
-  
-  const routes = {
-    dashboard: children.find(child => child.props.path === '/dashboard'),
-    models: children.find(child => child.props.path === '/models'),
-    data: children.find(child => child.props.path === '/data'),
-    monitoring: children.find(child => child.props.path === '/monitoring'),
-    analytics: children.find(child => child.props.path === '/analytics'),
-    reports: children.find(child => child.props.path === '/reports'),
-    logs: children.find(child => child.props.path === '/logs'),
-    team: children.find(child => child.props.path === '/team'),
-    settings: children.find(child => child.props.path === '/settings')
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return <DashboardContent />;
+      case 'team':
+        return <TeamContent />;
+      case 'models':
+        return <ModelsContent />;
+      case 'monitoring':
+        return <MonitoringContent />;
+      case 'analytics':
+        return <AnalyticsContent />;
+      case 'data':
+        return <DataContent />;
+      case 'logs':
+        return <LogsContent />;
+      case 'settings':
+        return <SettingsContent />;
+      default:
+        return <DashboardContent />;
+    }
   };
 
-  return routes[activeTab] || children.find(child => child.props.path === '/dashboard');
+  return (
+    <main className="flex-1 overflow-auto">
+      {renderContent()}
+    </main>
+  );
 };
 
-export const Route = ({ path, component, children }) => {
-  return component ? React.createElement(component) : children;
+// Content components
+const DashboardContent: React.FC = () => {
+  const { data: stats, loading, error } = useRealSystemStats();
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-32 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-800">Error loading dashboard: {error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6">
+      <h1 className="text-3xl font-bold text-gray-900 mb-6">Dashboard</h1>
+      
+      {stats && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white p-6 rounded-lg shadow">
+            <div className="flex items-center">
+              <Users className="h-8 w-8 text-blue-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Team Members</p>
+                <p className="text-2xl font-semibold text-gray-900">{stats.teamMembers}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white p-6 rounded-lg shadow">
+            <div className="flex items-center">
+              <Brain className="h-8 w-8 text-purple-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Models</p>
+                <p className="text-2xl font-semibold text-gray-900">{stats.totalModels}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white p-6 rounded-lg shadow">
+            <div className="flex items-center">
+              <Activity className="h-8 w-8 text-green-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Active Models</p>
+                <p className="text-2xl font-semibold text-gray-900">{stats.activeModels}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">System Overview</h2>
+        <p className="text-gray-600">
+          Welcome to the Persian Legal AI System. This dashboard provides real-time monitoring 
+          and management of your AI training infrastructure.
+        </p>
+      </div>
+    </div>
+  );
 };
+
+const TeamContent: React.FC = () => {
+  return (
+    <div className="p-6">
+      <h1 className="text-3xl font-bold text-gray-900 mb-6">Team Management</h1>
+      <div className="bg-white p-6 rounded-lg shadow">
+        <p className="text-gray-600">Team management content will be loaded here with real data.</p>
+      </div>
+    </div>
+  );
+};
+
+const ModelsContent: React.FC = () => {
+  return (
+    <div className="p-6">
+      <h1 className="text-3xl font-bold text-gray-900 mb-6">Model Training</h1>
+      <div className="bg-white p-6 rounded-lg shadow">
+        <p className="text-gray-600">Model training content will be loaded here with real data.</p>
+      </div>
+    </div>
+  );
+};
+
+const MonitoringContent: React.FC = () => {
+  return (
+    <div className="p-6">
+      <h1 className="text-3xl font-bold text-gray-900 mb-6">System Monitoring</h1>
+      <div className="bg-white p-6 rounded-lg shadow">
+        <p className="text-gray-600">System monitoring content will be loaded here with real data.</p>
+      </div>
+    </div>
+  );
+};
+
+const AnalyticsContent: React.FC = () => {
+  return (
+    <div className="p-6">
+      <h1 className="text-3xl font-bold text-gray-900 mb-6">Analytics</h1>
+      <div className="bg-white p-6 rounded-lg shadow">
+        <p className="text-gray-600">Analytics content will be loaded here with real data.</p>
+      </div>
+    </div>
+  );
+};
+
+const DataContent: React.FC = () => {
+  return (
+    <div className="p-6">
+      <h1 className="text-3xl font-bold text-gray-900 mb-6">Data Management</h1>
+      <div className="bg-white p-6 rounded-lg shadow">
+        <p className="text-gray-600">Data management content will be loaded here with real data.</p>
+      </div>
+    </div>
+  );
+};
+
+const LogsContent: React.FC = () => {
+  return (
+    <div className="p-6">
+      <h1 className="text-3xl font-bold text-gray-900 mb-6">System Logs</h1>
+      <div className="bg-white p-6 rounded-lg shadow">
+        <p className="text-gray-600">System logs content will be loaded here with real data.</p>
+      </div>
+    </div>
+  );
+};
+
+const SettingsContent: React.FC = () => {
+  return (
+    <div className="p-6">
+      <h1 className="text-3xl font-bold text-gray-900 mb-6">Settings</h1>
+      <div className="bg-white p-6 rounded-lg shadow">
+        <p className="text-gray-600">Settings content will be loaded here with real data.</p>
+      </div>
+    </div>
+  );
+};
+
+// Main App Layout
+export const AppLayout: React.FC = () => {
+  return (
+    <div className="flex h-screen bg-gray-100">
+      <Sidebar />
+      <div className="flex-1 flex flex-col">
+        <Header />
+        <MainContent />
+      </div>
+    </div>
+  );
+};
+
+// Main App component
+export const App: React.FC = () => {
+  return (
+    <AppProvider>
+      <AppLayout />
+    </AppProvider>
+  );
+};
+
+export default App;

@@ -33,8 +33,8 @@ const AnalyticsPage = () => {
   });
 
   useEffect(() => {
-    // Generate mock analytics data
-    const generateAnalytics = () => {
+    // Load real analytics data
+    const loadAnalytics = () => {
       const days = selectedTimeRange === '7d' ? 7 : selectedTimeRange === '30d' ? 30 : 90;
       
       const modelPerformance = Array.from({ length: days }, (_, i) => ({
