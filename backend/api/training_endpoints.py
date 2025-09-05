@@ -1,6 +1,6 @@
 """
-Real Training API Endpoints for Persian Legal AI
-نقاط پایانی API آموزش واقعی برای هوش مصنوعی حقوقی فارسی
+Real Training API Endpoints for Persian Legal AI with Security
+نقاط پایانی API آموزش واقعی با امنیت برای هوش مصنوعی حقوقی فارسی
 """
 
 import logging
@@ -8,7 +8,7 @@ import asyncio
 import uuid
 from typing import Dict, List, Optional, Any
 from datetime import datetime
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 from pydantic import BaseModel, Field
 
 # Import real training components
@@ -18,6 +18,9 @@ from services.persian_data_processor import PersianLegalDataProcessor
 
 # Import verified data training components
 from models.verified_data_trainer import VerifiedDataTrainer
+
+# Import authentication
+from auth.dependencies import require_training_permission, TokenData
 
 logger = logging.getLogger(__name__)
 
@@ -125,7 +128,11 @@ async def run_training_session(session_id: str, request: TrainingSessionRequest)
         training_sessions[session_id]["failed_at"] = datetime.utcnow()
 
 @router.post("/sessions", response_model=TrainingSessionResponse)
-async def create_training_session(request: TrainingSessionRequest, background_tasks: BackgroundTasks):
+async def create_training_session(
+    request: TrainingSessionRequest, 
+    background_tasks: BackgroundTasks,
+    current_user: TokenData = Depends(require_training_permission)
+):
     """Create a new training session"""
     try:
         # Validate request
@@ -184,7 +191,7 @@ async def create_training_session(request: TrainingSessionRequest, background_ta
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/sessions", response_model=List[TrainingSessionStatus])
-async def get_training_sessions():
+async def get_training_sessions(current_user: TokenData = Depends(require_training_permission)):
     """Get all training sessions"""
     try:
         sessions = []
@@ -208,7 +215,7 @@ async def get_training_sessions():
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/sessions/{session_id}", response_model=TrainingSessionStatus)
-async def get_training_session(session_id: str):
+async def get_training_session(session_id: str, current_user: TokenData = Depends(require_training_permission)):
     """Get specific training session"""
     try:
         if session_id not in training_sessions:
@@ -232,7 +239,7 @@ async def get_training_session(session_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/sessions/{session_id}")
-async def delete_training_session(session_id: str):
+async def delete_training_session(session_id: str, current_user: TokenData = Depends(require_training_permission)):
     """Delete training session"""
     try:
         if session_id not in training_sessions:
@@ -255,7 +262,7 @@ async def delete_training_session(session_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/sessions/{session_id}/metrics")
-async def get_training_metrics(session_id: str):
+async def get_training_metrics(session_id: str, current_user: TokenData = Depends(require_training_permission)):
     """Get detailed training metrics for a session"""
     try:
         if session_id not in training_sessions:
@@ -285,7 +292,7 @@ async def get_training_metrics(session_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/sessions/{session_id}/logs")
-async def get_training_logs(session_id: str):
+async def get_training_logs(session_id: str, current_user: TokenData = Depends(require_training_permission)):
     """Get training logs for a session"""
     try:
         if session_id not in training_sessions:
@@ -325,7 +332,7 @@ async def get_training_logs(session_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/sessions/{session_id}/stop")
-async def stop_training_session(session_id: str):
+async def stop_training_session(session_id: str, current_user: TokenData = Depends(require_training_permission)):
     """Stop a running training session"""
     try:
         if session_id not in training_sessions:
