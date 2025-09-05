@@ -63,6 +63,11 @@ jsonschema==4.20.0
 click==8.1.7
 loguru==0.7.2
 
+# Hugging Face and Dataset Integration
+huggingface-hub==0.19.4
+datasets==2.16.1
+tokenizers==0.15.0
+
 # Development and Testing
 pytest==7.4.3
 black==23.12.0
