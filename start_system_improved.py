@@ -105,56 +105,17 @@ def check_requirements():
     
     return requirements_met
 
-def create_frontend_package_json():
-    """ایجاد package.json برای frontend اگر وجود نداشته باشد"""
+def check_frontend_package_json():
+    """بررسی وجود package.json در frontend"""
     frontend_path = Path("frontend")
     package_json_path = frontend_path / "package.json"
     
     if not package_json_path.exists():
-        print_colored("📦 Creating package.json for frontend...", Colors.YELLOW)
-        
-        package_json = {
-            "name": "persian-legal-ai-frontend",
-            "private": True,
-            "version": "0.0.0",
-            "type": "module",
-            "scripts": {
-                "dev": "vite",
-                "build": "tsc && vite build",
-                "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-                "preview": "vite preview"
-            },
-            "dependencies": {
-                "react": "^18.2.0",
-                "react-dom": "^18.2.0",
-                "react-router-dom": "^6.8.0",
-                "recharts": "^2.5.0",
-                "lucide-react": "^0.263.1",
-                "axios": "^1.4.0"
-            },
-            "devDependencies": {
-                "@types/react": "^18.2.15",
-                "@types/react-dom": "^18.2.7",
-                "@typescript-eslint/eslint-plugin": "^6.0.0",
-                "@typescript-eslint/parser": "^6.0.0",
-                "@vitejs/plugin-react": "^4.0.3",
-                "eslint": "^8.45.0",
-                "eslint-plugin-react-hooks": "^4.6.0",
-                "eslint-plugin-react-refresh": "^0.4.3",
-                "typescript": "^5.0.2",
-                "vite": "^4.4.5"
-            }
-        }
-        
-        try:
-            with open(package_json_path, 'w', encoding='utf-8') as f:
-                json.dump(package_json, f, indent=2, ensure_ascii=False)
-            print_colored("✅ package.json created", Colors.GREEN)
-            return True
-        except Exception as e:
-            print_colored(f"❌ Failed to create package.json: {e}", Colors.RED)
-            return False
+        print_colored("❌ package.json not found in frontend directory!", Colors.RED)
+        print_colored("Please run 'npm run setup' to install all dependencies", Colors.YELLOW)
+        return False
     
+    print_colored("✅ Frontend package.json found", Colors.GREEN)
     return True
 
 def install_dependencies():
@@ -174,8 +135,8 @@ def install_dependencies():
         print_colored("❌ Python dependency installation timed out", Colors.RED)
         return False
     
-    # بررسی و ایجاد package.json برای frontend
-    if not create_frontend_package_json():
+    # بررسی وجود package.json در frontend
+    if not check_frontend_package_json():
         return False
     
     # نصب Frontend dependencies
@@ -345,12 +306,19 @@ def main():
     if install_deps in ['y', 'yes', 'بله', '']:
         if not install_dependencies():
             print_colored("\n❌ Dependency installation failed.", Colors.RED)
+            print_colored("💡 Try running: npm run setup", Colors.CYAN)
             return
     
     print_colored("\n🎯 Starting Persian Legal AI Training System...", Colors.GREEN + Colors.BOLD)
     print_colored("✨ Backend will be available at: http://localhost:8000", Colors.CYAN)
     print_colored("✨ Frontend will be available at: http://localhost:3000", Colors.CYAN)
     print_colored("✨ API Documentation at: http://localhost:8000/docs", Colors.CYAN)
+    print_colored("\n💡 Available npm scripts:", Colors.BLUE)
+    print_colored("   npm run setup    - Install all dependencies", Colors.WHITE)
+    print_colored("   npm run backend  - Start backend only", Colors.WHITE)
+    print_colored("   npm run frontend - Start frontend only", Colors.WHITE)
+    print_colored("   npm run test     - Run tests", Colors.WHITE)
+    print_colored("   npm run validate - Validate system", Colors.WHITE)
     print_colored("\n⚠️  Press Ctrl+C to stop all services\n", Colors.YELLOW)
     
     # ایجاد thread ها برای اجرای همزمان
