@@ -1,412 +1,334 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 
-// TypeScript interfaces
-interface SystemHealth {
-  status: string;
-  timestamp: string;
-  system_metrics: {
-    cpu_percent: number;
-    memory_percent: number;
-    memory_available_gb: number;
-    disk_percent: number;
-    disk_free_gb: number;
-    active_processes: number;
-  };
-  gpu_info: {
-    gpu_available: boolean;
-    gpu_count?: number;
-    gpu_name?: string;
-    gpu_memory_total?: number;
-    gpu_memory_used?: number;
-  };
-  platform_info: {
-    os: string;
-    os_version: string;
-    python_version: string;
-    architecture: string;
-  };
-}
+// Import components
+import LoginForm from './components/auth/LoginForm';
+import SystemHealthCard from './components/dashboard/SystemHealthCard';
+import TrainingControlPanel from './components/dashboard/TrainingControlPanel';
 
-interface TrainingSession {
-  session_id: string;
-  status: string;
-  progress: {
-    data_loaded: boolean;
-    model_initialized: boolean;
-    training_started: boolean;
-    training_completed: boolean;
-    train_samples: number;
-    eval_samples: number;
-    current_epoch: number;
-    total_epochs: number;
-    current_step: number;
-    total_steps: number;
-  };
-  metrics: {
-    total_steps?: number;
-    total_epochs?: number;
-    total_loss?: number;
-    best_loss?: number;
-    training_time?: number;
-    avg_loss?: number;
-  };
-  created_at: string;
-  updated_at: string;
-}
+// Import services
+import authService from './services/authService';
+import systemService from './services/systemService';
 
-interface TrainingSessionRequest {
-  model_type: 'dora' | 'qr_adaptor';
-  model_name: string;
-  config: {
-    base_model: string;
-    dora_rank?: number;
-    dora_alpha?: number;
-    quantization_bits?: number;
-    rank?: number;
-    alpha?: number;
-    num_epochs: number;
-    batch_size: number;
-    learning_rate: number;
-  };
-  data_source: string;
-  task_type: string;
-}
+// Import types
+import { User } from './types/auth';
+import { SystemHealth } from './types/system';
 
-const API_BASE_URL = 'http://localhost:8000';
-
-const App: React.FC = () => {
+// Dashboard component
+const Dashboard: React.FC = () => {
+  const [user, setUser] = useState<User | null>(null);
   const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
-  const [trainingSessions, setTrainingSessions] = useState<TrainingSession[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [newSession, setNewSession] = useState<TrainingSessionRequest>({
-    model_type: 'dora',
-    model_name: 'Test Model',
-    config: {
-      base_model: 'HooshvareLab/bert-base-parsbert-uncased',
-      dora_rank: 8,
-      dora_alpha: 16,
-      num_epochs: 3,
-      batch_size: 8,
-      learning_rate: 2e-4
-    },
-    data_source: 'sample',
-    task_type: 'text_classification'
-  });
 
-  // Fetch system health
-  const fetchSystemHealth = async () => {
-    try {
-      const response = await axios.get(`${API_BASE_URL}/api/system/health`);
-      setSystemHealth(response.data);
-    } catch (err) {
-      console.error('Failed to fetch system health:', err);
-      setError('Failed to fetch system health');
-    }
-  };
-
-  // Fetch training sessions
-  const fetchTrainingSessions = async () => {
-    try {
-      const response = await axios.get(`${API_BASE_URL}/api/training/sessions`);
-      setTrainingSessions(response.data);
-    } catch (err) {
-      console.error('Failed to fetch training sessions:', err);
-      setError('Failed to fetch training sessions');
-    }
-  };
-
-  // Create new training session
-  const createTrainingSession = async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const response = await axios.post(`${API_BASE_URL}/api/training/sessions`, newSession);
-      console.log('Training session created:', response.data);
-      
-      // Refresh training sessions
-      await fetchTrainingSessions();
-      
-      // Reset form
-      setNewSession({
-        model_type: 'dora',
-        model_name: 'Test Model',
-        config: {
-          base_model: 'HooshvareLab/bert-base-parsbert-uncased',
-          dora_rank: 8,
-          dora_alpha: 16,
-          num_epochs: 3,
-          batch_size: 8,
-          learning_rate: 2e-4
-        },
-        data_source: 'sample',
-        task_type: 'text_classification'
-      });
-      
-    } catch (err) {
-      console.error('Failed to create training session:', err);
-      setError('Failed to create training session');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Load data on component mount
   useEffect(() => {
-    fetchSystemHealth();
-    fetchTrainingSessions();
-    
-    // Set up auto-refresh
-    const interval = setInterval(() => {
-      fetchSystemHealth();
-      fetchTrainingSessions();
-    }, 5000);
-    
-    return () => clearInterval(interval);
+    const initializeDashboard = async () => {
+      try {
+        // Get current user
+        const currentUser = authService.getUser();
+        if (!currentUser) {
+          // Try to get user from API
+          const userData = await authService.getCurrentUser();
+          setUser(userData);
+        } else {
+          setUser(currentUser);
+        }
+
+        // Get system health
+        const health = await systemService.getSystemHealth();
+        setSystemHealth(health);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeDashboard();
   }, []);
 
-  return (
-    <div className="App">
-      <header className="App-header">
-        <h1>Persian Legal AI Training System</h1>
-        <p>سیستم آموزش هوش مصنوعی حقوقی فارسی</p>
-      </header>
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+      window.location.href = '/login';
+    } catch (err) {
+      console.error('Logout failed:', err);
+      // Force redirect even if logout API fails
+      window.location.href = '/login';
+    }
+  };
 
-      <main className="App-main">
-        {/* System Health Section */}
-        <section className="system-health">
-          <h2>System Health</h2>
-          {systemHealth ? (
-            <div className="health-grid">
-              <div className="health-card">
-                <h3>CPU Usage</h3>
-                <div className="metric-value">{systemHealth.system_metrics.cpu_percent.toFixed(1)}%</div>
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Error</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Navigation */}
+      <nav className="bg-white shadow">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16">
+            <div className="flex items-center">
+              <h1 className="text-xl font-semibold text-gray-900">
+                Persian Legal AI Dashboard
+              </h1>
+              <span className="ml-2 text-sm text-gray-500">
+                سیستم هوش مصنوعی حقوقی فارسی
+              </span>
+            </div>
+            <div className="flex items-center space-x-4">
+              {user && (
+                <div className="flex items-center space-x-3">
+                  <div className="text-sm">
+                    <div className="font-medium text-gray-900">{user.full_name}</div>
+                    <div className="text-gray-500">{user.username}</div>
+                  </div>
+                  <div className="flex space-x-1">
+                    {user.permissions.map((permission) => (
+                      <span
+                        key={permission}
+                        className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                      >
+                        {permission}
+                      </span>
+                    ))}
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    className="text-sm text-gray-500 hover:text-gray-700"
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* Main content */}
+      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div className="px-4 py-6 sm:px-0">
+          <div className="space-y-6">
+            {/* System Health */}
+            <SystemHealthCard />
+
+            {/* Training Control Panel */}
+            {authService.hasPermission('training') && <TrainingControlPanel />}
+
+            {/* Additional dashboard content */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Quick Stats */}
+              <div className="bg-white overflow-hidden shadow rounded-lg">
+                <div className="px-4 py-5 sm:p-6">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">Quick Stats</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-indigo-600">
+                        {systemHealth?.checks.system_metrics.cpu.count || 0}
+                      </div>
+                      <div className="text-sm text-gray-500">CPU Cores</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-600">
+                        {systemHealth?.checks.system_metrics.memory.total_gb.toFixed(1) || 0}GB
+                      </div>
+                      <div className="text-sm text-gray-500">Total Memory</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-purple-600">
+                        {systemHealth?.checks.gpu_info.count || 0}
+                      </div>
+                      <div className="text-sm text-gray-500">GPU Devices</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-yellow-600">
+                        {systemHealth?.checks.database.active_connections || 0}
+                      </div>
+                      <div className="text-sm text-gray-500">DB Connections</div>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="health-card">
-                <h3>Memory Usage</h3>
-                <div className="metric-value">{systemHealth.system_metrics.memory_percent.toFixed(1)}%</div>
-              </div>
-              <div className="health-card">
-                <h3>Available Memory</h3>
-                <div className="metric-value">{systemHealth.system_metrics.memory_available_gb.toFixed(1)} GB</div>
-              </div>
-              <div className="health-card">
-                <h3>Disk Usage</h3>
-                <div className="metric-value">{systemHealth.system_metrics.disk_percent.toFixed(1)}%</div>
-              </div>
-              <div className="health-card">
-                <h3>Active Processes</h3>
-                <div className="metric-value">{systemHealth.system_metrics.active_processes}</div>
-              </div>
-              <div className="health-card">
-                <h3>GPU Status</h3>
-                <div className="metric-value">
-                  {systemHealth.gpu_info.gpu_available ? 
-                    `Available (${systemHealth.gpu_info.gpu_count || 0})` : 
-                    'Not Available'
-                  }
+
+              {/* System Information */}
+              <div className="bg-white overflow-hidden shadow rounded-lg">
+                <div className="px-4 py-5 sm:p-6">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">System Information</h3>
+                  <dl className="space-y-2">
+                    <div className="flex justify-between">
+                      <dt className="text-sm font-medium text-gray-500">OS</dt>
+                      <dd className="text-sm text-gray-900">
+                        {systemHealth?.checks.system_metrics.cpu.count || 'Unknown'} cores
+                      </dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-sm font-medium text-gray-500">Memory</dt>
+                      <dd className="text-sm text-gray-900">
+                        {systemHealth?.checks.system_metrics.memory.total_gb.toFixed(1) || 'Unknown'} GB
+                      </dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-sm font-medium text-gray-500">GPU</dt>
+                      <dd className="text-sm text-gray-900">
+                        {systemHealth?.checks.gpu_info.available 
+                          ? `${systemHealth.checks.gpu_info.count} devices` 
+                          : 'Not available'
+                        }
+                      </dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-sm font-medium text-gray-500">Database</dt>
+                      <dd className="text-sm text-gray-900">
+                        {systemHealth?.checks.database.status || 'Unknown'}
+                      </dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-sm font-medium text-gray-500">SSL</dt>
+                      <dd className="text-sm text-gray-900">
+                        {systemHealth?.checks.security.ssl.enabled ? 'Enabled' : 'Disabled'}
+                      </dd>
+                    </div>
+                  </dl>
                 </div>
               </div>
             </div>
-          ) : (
-            <div className="loading">Loading system health...</div>
-          )}
-        </section>
 
-        {/* Training Sessions Section */}
-        <section className="training-sessions">
-          <h2>Training Sessions</h2>
-          
-          {/* Create New Session Form */}
-          <div className="create-session-form">
-            <h3>Create New Training Session</h3>
-            <div className="form-grid">
-              <div className="form-group">
-                <label>Model Type:</label>
-                <select 
-                  value={newSession.model_type} 
-                  onChange={(e) => setNewSession({
-                    ...newSession,
-                    model_type: e.target.value as 'dora' | 'qr_adaptor'
-                  })}
-                >
-                  <option value="dora">DoRA</option>
-                  <option value="qr_adaptor">QR-Adaptor</option>
-                </select>
-              </div>
-              
-              <div className="form-group">
-                <label>Model Name:</label>
-                <input 
-                  type="text" 
-                  value={newSession.model_name}
-                  onChange={(e) => setNewSession({
-                    ...newSession,
-                    model_name: e.target.value
-                  })}
-                />
-              </div>
-              
-              <div className="form-group">
-                <label>Data Source:</label>
-                <select 
-                  value={newSession.data_source}
-                  onChange={(e) => setNewSession({
-                    ...newSession,
-                    data_source: e.target.value
-                  })}
-                >
-                  <option value="sample">Sample Data</option>
-                  <option value="qavanin">Qavanin.ir</option>
-                  <option value="majlis">Majlis.ir</option>
-                </select>
-              </div>
-              
-              <div className="form-group">
-                <label>Task Type:</label>
-                <select 
-                  value={newSession.task_type}
-                  onChange={(e) => setNewSession({
-                    ...newSession,
-                    task_type: e.target.value
-                  })}
-                >
-                  <option value="text_classification">Text Classification</option>
-                  <option value="question_answering">Question Answering</option>
-                  <option value="text_generation">Text Generation</option>
-                </select>
-              </div>
-              
-              <div className="form-group">
-                <label>Epochs:</label>
-                <input 
-                  type="number" 
-                  value={newSession.config.num_epochs}
-                  onChange={(e) => setNewSession({
-                    ...newSession,
-                    config: {
-                      ...newSession.config,
-                      num_epochs: parseInt(e.target.value)
-                    }
-                  })}
-                />
-              </div>
-              
-              <div className="form-group">
-                <label>Batch Size:</label>
-                <input 
-                  type="number" 
-                  value={newSession.config.batch_size}
-                  onChange={(e) => setNewSession({
-                    ...newSession,
-                    config: {
-                      ...newSession.config,
-                      batch_size: parseInt(e.target.value)
-                    }
-                  })}
-                />
+            {/* Security Status */}
+            <div className="bg-white overflow-hidden shadow rounded-lg">
+              <div className="px-4 py-5 sm:p-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Security Status</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="flex items-center">
+                    <div className={`w-3 h-3 rounded-full mr-3 ${
+                      systemHealth?.checks.security.authentication.enabled ? 'bg-green-400' : 'bg-red-400'
+                    }`}></div>
+                    <span className="text-sm text-gray-700">Authentication</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className={`w-3 h-3 rounded-full mr-3 ${
+                      systemHealth?.checks.security.ssl.enabled ? 'bg-green-400' : 'bg-red-400'
+                    }`}></div>
+                    <span className="text-sm text-gray-700">SSL/TLS</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className={`w-3 h-3 rounded-full mr-3 ${
+                      systemHealth?.checks.security.authentication.rate_limiting ? 'bg-green-400' : 'bg-red-400'
+                    }`}></div>
+                    <span className="text-sm text-gray-700">Rate Limiting</span>
+                  </div>
+                </div>
               </div>
             </div>
-            
-            <button 
-              onClick={createTrainingSession} 
-              disabled={loading}
-              className="create-button"
-            >
-              {loading ? 'Creating...' : 'Create Training Session'}
-            </button>
           </div>
-
-          {/* Training Sessions List */}
-          <div className="sessions-list">
-            <h3>Active Training Sessions</h3>
-            {trainingSessions.length > 0 ? (
-              <div className="sessions-grid">
-                {trainingSessions.map((session) => (
-                  <div key={session.session_id} className="session-card">
-                    <div className="session-header">
-                      <h4>{session.session_id.substring(0, 8)}...</h4>
-                      <span className={`status ${session.status}`}>{session.status}</span>
-                    </div>
-                    
-                    <div className="session-progress">
-                      <div className="progress-item">
-                        <span>Data Loaded:</span>
-                        <span className={session.progress.data_loaded ? 'success' : 'pending'}>
-                          {session.progress.data_loaded ? '✓' : '○'}
-                        </span>
-                      </div>
-                      <div className="progress-item">
-                        <span>Model Initialized:</span>
-                        <span className={session.progress.model_initialized ? 'success' : 'pending'}>
-                          {session.progress.model_initialized ? '✓' : '○'}
-                        </span>
-                      </div>
-                      <div className="progress-item">
-                        <span>Training Started:</span>
-                        <span className={session.progress.training_started ? 'success' : 'pending'}>
-                          {session.progress.training_started ? '✓' : '○'}
-                        </span>
-                      </div>
-                      <div className="progress-item">
-                        <span>Training Completed:</span>
-                        <span className={session.progress.training_completed ? 'success' : 'pending'}>
-                          {session.progress.training_completed ? '✓' : '○'}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    {session.metrics && Object.keys(session.metrics).length > 0 && (
-                      <div className="session-metrics">
-                        <h5>Metrics:</h5>
-                        <div className="metrics-grid">
-                          {session.metrics.avg_loss && (
-                            <div className="metric">
-                              <span>Avg Loss:</span>
-                              <span>{session.metrics.avg_loss.toFixed(4)}</span>
-                            </div>
-                          )}
-                          {session.metrics.training_time && (
-                            <div className="metric">
-                              <span>Training Time:</span>
-                              <span>{session.metrics.training_time.toFixed(2)}s</span>
-                            </div>
-                          )}
-                          {session.metrics.total_steps && (
-                            <div className="metric">
-                              <span>Total Steps:</span>
-                              <span>{session.metrics.total_steps}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    
-                    <div className="session-info">
-                      <small>Created: {new Date(session.created_at).toLocaleString()}</small>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="no-sessions">No training sessions found</div>
-            )}
-          </div>
-        </section>
-
-        {/* Error Display */}
-        {error && (
-          <div className="error-message">
-            <h3>Error:</h3>
-            <p>{error}</p>
-            <button onClick={() => setError(null)}>Dismiss</button>
-          </div>
-        )}
+        </div>
       </main>
     </div>
+  );
+};
+
+// Protected Route component
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const checkAuth = () => {
+      const authenticated = authService.isAuthenticated();
+      setIsAuthenticated(authenticated);
+    };
+
+    checkAuth();
+  }, []);
+
+  if (isAuthenticated === null) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
+  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
+};
+
+// Main App component
+const App: React.FC = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const checkAuth = () => {
+      const authenticated = authService.isAuthenticated();
+      setIsAuthenticated(authenticated);
+    };
+
+    checkAuth();
+  }, []);
+
+  const handleLoginSuccess = () => {
+    setIsAuthenticated(true);
+  };
+
+  if (isAuthenticated === null) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <Router>
+      <Routes>
+        <Route 
+          path="/login" 
+          element={
+            isAuthenticated ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <LoginForm onLoginSuccess={handleLoginSuccess} />
+            )
+          } 
+        />
+        <Route 
+          path="/dashboard" 
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/" 
+          element={<Navigate to="/dashboard" replace />} 
+        />
+        <Route 
+          path="*" 
+          element={<Navigate to="/dashboard" replace />} 
+        />
+      </Routes>
+    </Router>
   );
 };
 

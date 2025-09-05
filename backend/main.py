@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-Persian Legal AI Backend Server - Real Implementation
-سرور Backend واقعی برای سیستم هوش مصنوعی حقوقی فارسی
+Persian Legal AI Backend Server - Enhanced Security Implementation
+سرور Backend با امنیت پیشرفته برای سیستم هوش مصنوعی حقوقی فارسی
 """
 
 import asyncio
 import logging
 import time
+import ssl
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 import uvicorn
@@ -20,10 +21,15 @@ import os
 # Import real API endpoints
 from api.system_endpoints import router as system_router
 from api.training_endpoints import router as training_router
+from api.enhanced_health import router as health_router
+from auth.routes import router as auth_router
 
 # Import database and optimization
 from database.connection import init_database, db_manager
 from optimization.system_optimizer import system_optimizer
+
+# Import security middleware
+from middleware.rate_limiter import rate_limit_middleware
 
 # Setup logging
 logging.basicConfig(
@@ -37,25 +43,31 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class PersianAIBackend:
-    """Real Persian AI Backend Server"""
+    """Enhanced Persian AI Backend Server with Security"""
     
     def __init__(self):
         self.app = FastAPI(
-            title="Persian Legal AI Backend - Real Implementation",
-            description="سرور Backend واقعی برای سیستم هوش مصنوعی حقوقی فارسی",
-            version="2.0.0"
+            title="Persian Legal AI Backend - Enhanced Security",
+            description="سرور Backend با امنیت پیشرفته برای سیستم هوش مصنوعی حقوقی فارسی",
+            version="2.1.0"
         )
         
-        # Setup CORS
+        # Setup CORS with environment-based origins
+        cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://frontend:80").split(",")
         self.app.add_middleware(
             CORSMiddleware,
-            allow_origins=["*"],
+            allow_origins=cors_origins,
             allow_credentials=True,
-            allow_methods=["*"],
+            allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             allow_headers=["*"],
         )
         
+        # Add rate limiting middleware
+        self.app.middleware("http")(rate_limit_middleware)
+        
         # Include routers
+        self.app.include_router(auth_router)
+        self.app.include_router(health_router)
         self.app.include_router(system_router)
         self.app.include_router(training_router)
         
@@ -65,7 +77,7 @@ class PersianAIBackend:
         # Setup routes
         self._setup_routes()
         
-        logger.info("Persian AI Backend initialized")
+        logger.info("Enhanced Persian AI Backend initialized with security features")
     
     def _setup_routes(self):
         """Setup additional routes"""
@@ -243,17 +255,48 @@ async def shutdown_event():
 # Get FastAPI app
 app = backend.app
 
+def create_ssl_context():
+    """Create SSL context for HTTPS"""
+    try:
+        cert_file = "/app/certificates/server.crt"
+        key_file = "/app/certificates/server.key"
+        
+        if os.path.exists(cert_file) and os.path.exists(key_file):
+            ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            ssl_context.load_cert_chain(cert_file, key_file)
+            logger.info("SSL context created successfully")
+            return ssl_context
+        else:
+            logger.warning("SSL certificates not found, running without HTTPS")
+            return None
+    except Exception as e:
+        logger.error(f"Failed to create SSL context: {e}")
+        return None
+
 def main():
     """Main function to run the server"""
     try:
-        logger.info("Starting Persian Legal AI Backend Server...")
+        logger.info("Starting Enhanced Persian Legal AI Backend Server...")
+        
+        # Check for SSL certificates
+        ssl_context = create_ssl_context()
+        use_https = ssl_context is not None
+        
+        # Determine port and protocol
+        if use_https:
+            port = int(os.getenv("HTTPS_PORT", "8443"))
+            logger.info(f"Starting server with HTTPS on port {port}")
+        else:
+            port = int(os.getenv("HTTP_PORT", "8000"))
+            logger.info(f"Starting server with HTTP on port {port}")
         
         # Run server
         uvicorn.run(
             "main:app",
             host="0.0.0.0",
-            port=8000,
+            port=port,
             reload=False,
+            ssl_context=ssl_context,
             log_level="info",
             access_log=True
         )
