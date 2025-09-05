@@ -6,7 +6,7 @@ import {
   TrendingUp, TrendingDown, Wifi, Globe, Database, Memory
 } from 'lucide-react';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadialBarChart, RadialBar, PieChart, Pie, Cell } from 'recharts';
-import { useAppContext } from './Router';
+import { useAppContext } from './router';
 
 const MonitoringPage = () => {
   const { realTimeData, autoRefresh, setAutoRefresh, refreshInterval } = useAppContext();

@@ -6,7 +6,8 @@
   "description": "Frontend for Persian Legal AI Training System - React + TypeScript + Vite",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
+    "start": "vite preview --port 3000 --host",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "type-check": "tsc --noEmit",

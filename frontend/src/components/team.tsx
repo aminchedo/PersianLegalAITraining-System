@@ -5,7 +5,7 @@ import {
   Clock, Activity, CheckCircle, AlertCircle, Eye, EyeOff,
   UserPlus, UserMinus, Key, Award, Target, BarChart3
 } from 'lucide-react';
-import { useAppContext } from './Router';
+import { useAppContext } from './router';
 
 const TeamPage = () => {
   const { teamMembers } = useAppContext();
