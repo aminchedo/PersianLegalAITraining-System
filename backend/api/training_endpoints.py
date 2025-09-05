@@ -16,6 +16,9 @@ from models.dora_trainer import DoRATrainer, DoRAConfig
 from models.qr_adaptor import QRAdaptor, QRAdaptorConfig
 from services.persian_data_processor import PersianLegalDataProcessor
 
+# Import verified data training components
+from models.verified_data_trainer import VerifiedDataTrainer
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/training", tags=["training"])
@@ -43,6 +46,9 @@ class TrainingSessionStatus(BaseModel):
 
 # In-memory storage for training sessions (in production, use database)
 training_sessions = {}
+
+# Initialize verified data trainer
+verified_trainer = VerifiedDataTrainer()
 
 async def run_training_session(session_id: str, request: TrainingSessionRequest):
     """Run training session in background"""
@@ -343,4 +349,169 @@ async def stop_training_session(session_id: str):
         raise
     except Exception as e:
         logger.error(f"Failed to stop training session {session_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============================================================================
+# VERIFIED DATA TRAINING ENDPOINTS
+# ============================================================================
+# New endpoints for verified dataset training while maintaining compatibility
+
+@router.post("/sessions/verified")
+async def create_verified_training_session(
+    request: TrainingSessionRequest,
+    background_tasks: BackgroundTasks
+):
+    """
+    NEW endpoint for verified data training
+    Maintains EXACT same request/response format as existing endpoints
+    """
+    try:
+        logger.info("🎯 Starting verified data training session")
+        
+        # Validate request format (same as existing endpoint)
+        if not request.model_type or not request.model_name:
+            raise HTTPException(status_code=400, detail="model_type and model_name are required")
+        
+        # Prepare training configuration
+        training_config = {
+            'model_type': request.model_type,
+            'model_name': request.model_name,
+            'rank': request.config.get('rank', 16),
+            'alpha': request.config.get('alpha', 32),
+            'dropout': request.config.get('dropout', 0.1),
+            'learning_rate': request.config.get('learning_rate', 2e-4),
+            'batch_size': request.config.get('batch_size', 4),
+            'num_epochs': request.config.get('num_epochs', 3),
+            'max_length': request.config.get('max_length', 512),
+            'warmup_steps': request.config.get('warmup_steps', 100),
+            'target_modules': request.config.get('target_modules', ["q_proj", "v_proj"])
+        }
+        
+        # Start verified data training
+        result = await verified_trainer.train_with_verified_data(training_config)
+        
+        if result['success']:
+            # Maintain EXACT same response format as existing endpoints
+            response = {
+                "sessionId": result['session_id'],
+                "status": "success",
+                "message": "Verified data training started successfully",
+                "created_at": datetime.utcnow(),
+                "datasets_used": result.get('datasets_used', []),
+                "validation_passed": result.get('validation_passed', {}),
+                "training_data_info": result.get('training_data_info', {})
+            }
+            
+            logger.info(f"✅ Verified training session created: {result['session_id']}")
+            return response
+        else:
+            # Maintain EXACT error format as existing endpoints
+            raise HTTPException(
+                status_code=500,
+                detail=f"Verified training failed: {result.get('error', 'Unknown error')}"
+            )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to create verified training session: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/sessions/verified/{session_id}/status")
+async def get_verified_training_status(session_id: str):
+    """Get status of verified training session"""
+    try:
+        status = verified_trainer.get_training_session_status(session_id)
+        
+        if 'error' in status:
+            raise HTTPException(status_code=404, detail=status['error'])
+        
+        # Maintain EXACT same response format as existing endpoints
+        return {
+            "session_id": session_id,
+            "status": status.get('status', 'unknown'),
+            "progress": status.get('progress', 0),
+            "metrics": status.get('metrics', {}),
+            "created_at": status.get('start_time', datetime.utcnow()),
+            "updated_at": status.get('updated_at', datetime.utcnow())
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get verified training status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/datasets/verified")
+async def get_verified_datasets_info():
+    """Get information about verified datasets"""
+    try:
+        dataset_info = verified_trainer.get_dataset_info()
+        validation_report = verified_trainer.get_validation_report()
+        
+        return {
+            "verified_datasets": dataset_info.get('verified_datasets', {}),
+            "loaded_datasets": dataset_info.get('loaded_datasets', {}),
+            "validation_report": validation_report,
+            "integration_status": dataset_info.get('integration_status', {})
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get verified datasets info: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/datasets/verify")
+async def verify_datasets():
+    """Trigger dataset verification process"""
+    try:
+        logger.info("🔍 Starting dataset verification process")
+        
+        # Load and verify datasets
+        datasets = verified_trainer.data_integrator.load_verified_datasets()
+        validation_results = verified_trainer.quality_validator.validate_datasets(datasets)
+        
+        return {
+            "verification_completed": True,
+            "datasets_verified": len(validation_results),
+            "validation_results": validation_results,
+            "verification_timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to verify datasets: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/sessions/verified")
+async def get_all_verified_training_sessions():
+    """Get all verified training sessions"""
+    try:
+        sessions_info = verified_trainer.get_all_training_sessions()
+        training_log = verified_trainer.get_training_log(limit=50)
+        
+        return {
+            "sessions": sessions_info.get('sessions', {}),
+            "total_sessions": sessions_info.get('total_sessions', 0),
+            "active_sessions": sessions_info.get('active_sessions', 0),
+            "recent_training_log": training_log
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get verified training sessions: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/sessions/verified/{session_id}")
+async def cancel_verified_training_session(session_id: str):
+    """Cancel a verified training session"""
+    try:
+        result = await verified_trainer.cancel_training_session(session_id)
+        
+        if result['success']:
+            return {"message": "Verified training session cancelled successfully"}
+        else:
+            raise HTTPException(status_code=404, detail=result.get('error', 'Session not found'))
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to cancel verified training session: {e}")
         raise HTTPException(status_code=500, detail=str(e))
