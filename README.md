@@ -262,58 +262,174 @@ graph TB
 
 ---
 
-## <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="start-grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#28a745;stop-opacity:1" /><stop offset="100%" style="stop-color:#20c997;stop-opacity:1" /></linearGradient></defs><circle cx="12" cy="12" r="10" stroke="url(#start-grad)" stroke-width="2" fill="none"/><path d="M8 12L11 15L16 9" stroke="url(#start-grad)" stroke-width="2" fill="none"/></svg> **Quick Start**
+<div style="margin: 50px 0;">
 
-<details open>
-<summary><strong>🚀 Get Started in 4 Steps</strong></summary>
+## <svg width="42" height="42" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-right: 15px;">
+  <defs>
+    <linearGradient id="start-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#28a745;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#20c997;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#17a2b8;stop-opacity:1" />
+    </linearGradient>
+    <filter id="start-glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <circle cx="60" cy="60" r="50" stroke="url(#start-gradient)" stroke-width="4" fill="none" filter="url(#start-glow)">
+    <animate attributeName="stroke-dasharray" values="0 314;314 0;0 314" dur="4s" repeatCount="indefinite"/>
+  </circle>
+  <path d="M35 45L50 60L85 35" stroke="url(#start-gradient)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none" filter="url(#start-glow)">
+    <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" repeatCount="indefinite"/>
+  </path>
+</svg> <span style="font-family: 'SF Pro Display', 'Segoe UI', sans-serif; font-weight: 800; font-size: 2.4em; background: linear-gradient(135deg, #28a745 0%, #20c997 50%, #17a2b8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.8px;">Quick Start</span>
 
-### Step 1: <svg width="20" height="20" viewBox="0 0 24 24" fill="#007bff"><circle cx="12" cy="12" r="10"/><text x="12" y="16" text-anchor="middle" fill="white" font-size="12" font-weight="bold">1</text></svg> **Installation**
+<details open style="margin-top: 30px;">
+<summary style="font-family: 'SF Pro Display', 'Segoe UI', sans-serif; font-weight: 600; font-size: 1.3em; color: #495057; cursor: pointer; padding: 15px 0; border-bottom: 3px solid #e9ecef; list-style: none; transition: color 0.3s ease;">
+<span style="margin-left: 10px;">Launch System in 4 Easy Steps</span>
+</summary>
 
-```bash
-# Clone the repository
-git clone <repository-url>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; margin: 35px 0;">
+
+<!-- Step 1 -->
+<div style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border-radius: 20px; padding: 25px; border: 2px solid #2196f3; box-shadow: 0 6px 25px rgba(33, 150, 243, 0.15); position: relative; overflow: hidden;">
+  <div style="position: absolute; top: -10px; right: -10px; width: 60px; height: 60px; background: linear-gradient(135deg, #2196f3, #1976d2); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);">
+    <span style="color: white; font-family: 'SF Pro Display', sans-serif; font-weight: 800; font-size: 1.4em;">1</span>
+  </div>
+  
+  <h3 style="font-family: 'SF Pro Display', sans-serif; font-weight: 700; font-size: 1.3em; color: #1565c0; margin: 15px 0 20px 0; letter-spacing: -0.3px;">
+    <svg width="24" height="24" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 8px;">
+      <path d="M9 12L11 14L15 10M21 12C21 16.97 16.97 21 12 21S3 16.97 3 12 7.03 3 12 3 21 7.03 21 12Z" fill="#1565c0"/>
+    </svg>
+    Installation
+  </h3>
+  
+  <div style="background: linear-gradient(135deg, #0d47a1 0%, #1565c0 100%); border-radius: 12px; padding: 18px; margin: 15px 0; box-shadow: 0 4px 15px rgba(13, 71, 161, 0.2);">
+    <pre style="margin: 0; color: #e3f2fd; font-family: 'SF Mono', 'Consolas', monospace; font-size: 0.85em; line-height: 1.4; overflow-x: auto;"><code># Clone the repository
+git clone &lt;repository-url&gt;
 cd persian-legal-ai-system
 
 # Install Python dependencies
 pip install -r requirements.txt
 
 # Install frontend dependencies
-cd frontend && npm install && cd ..
-```
+cd frontend && npm install && cd ..</code></pre>
+  </div>
+  
+  <div style="background: rgba(255,255,255,0.8); border-radius: 10px; padding: 12px; margin-top: 15px; border-left: 4px solid #2196f3;">
+    <span style="font-family: 'SF Pro Text', sans-serif; font-weight: 600; color: #1565c0; font-size: 0.9em;">
+      Prerequisites: Python 3.8+, Node.js 16+, Git
+    </span>
+  </div>
+</div>
 
-### Step 2: <svg width="20" height="20" viewBox="0 0 24 24" fill="#28a745"><circle cx="12" cy="12" r="10"/><text x="12" y="16" text-anchor="middle" fill="white" font-size="12" font-weight="bold">2</text></svg> **System Test**
+<!-- Step 2 -->
+<div style="background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%); border-radius: 20px; padding: 25px; border: 2px solid #4caf50; box-shadow: 0 6px 25px rgba(76, 175, 80, 0.15); position: relative; overflow: hidden;">
+  <div style="position: absolute; top: -10px; right: -10px; width: 60px; height: 60px; background: linear-gradient(135deg, #4caf50, #388e3c); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);">
+    <span style="color: white; font-family: 'SF Pro Display', sans-serif; font-weight: 800; font-size: 1.4em;">2</span>
+  </div>
+  
+  <h3 style="font-family: 'SF Pro Display', sans-serif; font-weight: 700; font-size: 1.3em; color: #2e7d32; margin: 15px 0 20px 0; letter-spacing: -0.3px;">
+    <svg width="24" height="24" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 8px;">
+      <path d="M12 2L13.09 8.26L22 9L13.09 9.74L12 16L10.91 9.74L2 9L10.91 8.26L12 2Z" fill="#2e7d32"/>
+    </svg>
+    System Test
+  </h3>
+  
+  <div style="background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%); border-radius: 12px; padding: 18px; margin: 15px 0; box-shadow: 0 4px 15px rgba(27, 94, 32, 0.2);">
+    <pre style="margin: 0; color: #e8f5e8; font-family: 'SF Mono', 'Consolas', monospace; font-size: 0.85em; line-height: 1.4;"><code># Run comprehensive system test
+python run_full_system_test.py</code></pre>
+  </div>
+  
+  <div style="background: rgba(255,255,255,0.8); border-radius: 10px; padding: 12px; margin-top: 15px; border-left: 4px solid #4caf50;">
+    <div style="font-family: 'SF Mono', 'Consolas', monospace; font-size: 0.8em; line-height: 1.5; color: #2e7d32;">
+      <div>✅ Data Loading: PASSED</div>
+      <div>✅ Model Training: PASSED</div>
+      <div>✅ API Endpoints: PASSED</div>
+      <div>✅ Database Operations: PASSED</div>
+    </div>
+  </div>
+</div>
 
-```bash
-# Run comprehensive system test
-python run_full_system_test.py
-```
+<!-- Step 3 -->
+<div style="background: linear-gradient(135deg, #fff3e0 0%, #ffcc80 100%); border-radius: 20px; padding: 25px; border: 2px solid #ff9800; box-shadow: 0 6px 25px rgba(255, 152, 0, 0.15); position: relative; overflow: hidden;">
+  <div style="position: absolute; top: -10px; right: -10px; width: 60px; height: 60px; background: linear-gradient(135deg, #ff9800, #f57c00); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);">
+    <span style="color: white; font-family: 'SF Pro Display', sans-serif; font-weight: 800; font-size: 1.4em;">3</span>
+  </div>
+  
+  <h3 style="font-family: 'SF Pro Display', sans-serif; font-weight: 700; font-size: 1.3em; color: #e65100; margin: 15px 0 20px 0; letter-spacing: -0.3px;">
+    <svg width="24" height="24" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 8px;">
+      <path d="M13 2.05V6.59C16.24 7.25 18.75 9.76 19.41 13H23.95C23.44 8.38 19.62 4.56 15 4.05H13V2.05Z" fill="#e65100"/>
+    </svg>
+    Launch System
+  </h3>
+  
+  <div style="background: linear-gradient(135deg, #bf360c 0%, #e65100 100%); border-radius: 12px; padding: 18px; margin: 15px 0; box-shadow: 0 4px 15px rgba(191, 54, 12, 0.2);">
+    <pre style="margin: 0; color: #fff3e0; font-family: 'SF Mono', 'Consolas', monospace; font-size: 0.85em; line-height: 1.4;"><code># Start the complete system
+python start_system.py</code></pre>
+  </div>
+  
+  <div style="background: rgba(255,255,255,0.8); border-radius: 10px; padding: 12px; margin-top: 15px; border-left: 4px solid #ff9800;">
+    <div style="font-family: 'SF Pro Text', sans-serif; font-size: 0.85em; line-height: 1.4; color: #e65100;">
+      <div style="margin-bottom: 4px;">• Backend API Server (Port 8000)</div>
+      <div style="margin-bottom: 4px;">• Frontend Dashboard (Port 3000)</div>
+      <div style="margin-bottom: 4px;">• Database Initialization</div>
+      <div>• Real-time Monitoring</div>
+    </div>
+  </div>
+</div>
 
-**Expected Output:**
-```
-✅ Data Loading: PASSED
-✅ Model Training: PASSED  
-✅ API Endpoints: PASSED
-✅ Database Operations: PASSED
-✅ Frontend Integration: PASSED
-```
+<!-- Step 4 -->
+<div style="background: linear-gradient(135deg, #ffebee 0%, #f8bbd9 100%); border-radius: 20px; padding: 25px; border: 2px solid #e91e63; box-shadow: 0 6px 25px rgba(233, 30, 99, 0.15); position: relative; overflow: hidden;">
+  <div style="position: absolute; top: -10px; right: -10px; width: 60px; height: 60px; background: linear-gradient(135deg, #e91e63, #c2185b); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(233, 30, 99, 0.3);">
+    <span style="color: white; font-family: 'SF Pro Display', sans-serif; font-weight: 800; font-size: 1.4em;">4</span>
+  </div>
+  
+  <h3 style="font-family: 'SF Pro Display', sans-serif; font-weight: 700; font-size: 1.3em; color: #ad1457; margin: 15px 0 20px 0; letter-spacing: -0.3px;">
+    <svg width="24" height="24" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 8px;">
+      <path d="M12 2L2 7L12 12L22 7L12 2ZM2 17L12 22L22 17M2 12L12 17L22 12" fill="#ad1457"/>
+    </svg>
+    Access Interface
+  </h3>
+  
+  <div style="background: rgba(255,255,255,0.9); border-radius: 12px; padding: 15px; margin: 15px 0; border: 1px solid #f48fb1;">
+    <table style="width: 100%; border-collapse: collapse;">
+      <tr style="border-bottom: 1px solid #f8bbd9;">
+        <td style="padding: 8px 0; font-family: 'SF Pro Text', sans-serif; font-weight: 600; color: #ad1457; font-size: 0.85em;">🎯 Dashboard</td>
+        <td style="padding: 8px 0; text-align: right;">
+          <a href="http://localhost:3000" style="font-family: 'SF Mono', monospace; color: #1976d2; text-decoration: none; font-size: 0.8em; background: #e3f2fd; padding: 2px 6px; border-radius: 4px;">:3000</a>
+        </td>
+      </tr>
+      <tr style="border-bottom: 1px solid #f8bbd9;">
+        <td style="padding: 8px 0; font-family: 'SF Pro Text', sans-serif; font-weight: 600; color: #ad1457; font-size: 0.85em;">🚀 API</td>
+        <td style="padding: 8px 0; text-align: right;">
+          <a href="http://localhost:8000" style="font-family: 'SF Mono', monospace; color: #1976d2; text-decoration: none; font-size: 0.8em; background: #e3f2fd; padding: 2px 6px; border-radius: 4px;">:8000</a>
+        </td>
+      </tr>
+      <tr style="border-bottom: 1px solid #f8bbd9;">
+        <td style="padding: 8px 0; font-family: 'SF Pro Text', sans-serif; font-weight: 600; color: #ad1457; font-size: 0.85em;">📚 Docs</td>
+        <td style="padding: 8px 0; text-align: right;">
+          <a href="http://localhost:8000/docs" style="font-family: 'SF Mono', monospace; color: #1976d2; text-decoration: none; font-size: 0.8em; background: #e3f2fd; padding: 2px 6px; border-radius: 4px;">:8000/docs</a>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 0; font-family: 'SF Pro Text', sans-serif; font-weight: 600; color: #ad1457; font-size: 0.85em;">🔍 Health</td>
+        <td style="padding: 8px 0; text-align: right;">
+          <a href="http://localhost:8000/api/system/health" style="font-family: 'SF Mono', monospace; color: #1976d2; text-decoration: none; font-size: 0.8em; background: #e3f2fd; padding: 2px 6px; border-radius: 4px;">:8000/health</a>
+        </td>
+      </tr>
+    </table>
+  </div>
+</div>
 
-### Step 3: <svg width="20" height="20" viewBox="0 0 24 24" fill="#ffc107"><circle cx="12" cy="12" r="10"/><text x="12" y="16" text-anchor="middle" fill="white" font-size="12" font-weight="bold">3</text></svg> **Launch System**
-
-```bash
-# Start the complete system
-python start_system.py
-```
-
-### Step 4: <svg width="20" height="20" viewBox="0 0 24 24" fill="#dc3545"><circle cx="12" cy="12" r="10"/><text x="12" y="16" text-anchor="middle" fill="white" font-size="12" font-weight="bold">4</text></svg> **Access Interface**
-
-| Service | URL | Description |
-|---------|-----|-------------|
-| 🎯 **Dashboard** | [localhost:3000](http://localhost:3000) | React Frontend |
-| 🚀 **API** | [localhost:8000](http://localhost:8000) | FastAPI Backend |
-| 📚 **Docs** | [localhost:8000/docs](http://localhost:8000/docs) | API Documentation |
-| 🔍 **Health** | [localhost:8000/api/system/health](http://localhost:8000/api/system/health) | System Status |
+</div>
 
 </details>
+
+</div>
 
 ---
 
