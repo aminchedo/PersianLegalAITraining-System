@@ -1,0 +1,56 @@
+{
+  "name": "persian-legal-ai-training-system",
+  "version": "1.0.0",
+  "description": "Persian Legal AI Training System with DoRA & QR-Adaptor - Created by dreammaker",
+  "main": "start_system.py",
+  "scripts": {
+    "start": "python start_system.py",
+    "dev": "python start_system.py",
+    "setup": "pip install -r requirements.txt && cd frontend && npm install",
+    "backend": "python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000",
+    "frontend": "cd frontend && npm run dev",
+    "test": "python -m pytest tests/ -v",
+    "test:full": "python run_full_system_test.py",
+    "validate": "bash validate-system.sh",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "clean": "find . -name '__pycache__' -exec rm -rf {} + && find . -name '*.pyc' -delete",
+    "format": "black . && isort .",
+    "lint": "flake8 . && cd frontend && npm run lint",
+    "docs": "python -c \"import webbrowser; webbrowser.open('http://localhost:8000/docs')\"",
+    "health": "curl -s http://localhost:8000/api/system/health | python -m json.tool"
+  },
+  "keywords": [
+    "persian",
+    "legal",
+    "ai",
+    "training",
+    "dora",
+    "qr-adaptor",
+    "fastapi",
+    "react",
+    "typescript",
+    "nlp",
+    "machine-learning"
+  ],
+  "author": "dreammaker",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0",
+    "python": ">=3.8.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/persian-legal-ai-training-system"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/persian-legal-ai-training-system/issues"
+  },
+  "homepage": "https://github.com/yourusername/persian-legal-ai-training-system#readme",
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  },
+  "dependencies": {}
+}
