@@ -1,18 +1,17 @@
 """
-System API Endpoints for Persian Legal AI
-نقاط پایانی API سیستم برای هوش مصنوعی حقوقی فارسی
+Real System API Endpoints for Persian Legal AI
+نقاط پایانی API سیستم واقعی برای هوش مصنوعی حقوقی فارسی
 """
 
 import logging
 import psutil
 import os
+import platform
+import sys
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-
-from ..database.connection import db_manager
-from ..services.training_service import training_service
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +23,8 @@ class SystemInfoModel(BaseModel):
     disk_space_gb: float
     os_info: str
     python_version: str
+    torch_available: bool
+    cuda_available: bool
 
 class SystemMetricsModel(BaseModel):
     timestamp: datetime
@@ -32,25 +33,90 @@ class SystemMetricsModel(BaseModel):
     disk_usage: float
     network_io: Dict[str, int]
     active_processes: int
+    gpu_usage: Optional[float] = None
+    gpu_memory: Optional[float] = None
+
+@router.get("/health")
+async def get_system_health():
+    """Get real system health status"""
+    try:
+        # Get real system metrics
+        cpu_percent = psutil.cpu_percent(interval=1)
+        memory = psutil.virtual_memory()
+        disk = psutil.disk_usage('/')
+        network = psutil.net_io_counters()
+        
+        # Get GPU info if available
+        gpu_info = {}
+        try:
+            import torch
+            if torch.cuda.is_available():
+                gpu_info = {
+                    "gpu_available": True,
+                    "gpu_count": torch.cuda.device_count(),
+                    "gpu_name": torch.cuda.get_device_name(0),
+                    "gpu_memory_total": torch.cuda.get_device_properties(0).total_memory / (1024**3),
+                    "gpu_memory_used": torch.cuda.memory_allocated(0) / (1024**3),
+                    "gpu_memory_free": (torch.cuda.get_device_properties(0).total_memory - torch.cuda.memory_allocated(0)) / (1024**3)
+                }
+            else:
+                gpu_info = {"gpu_available": False}
+        except ImportError:
+            gpu_info = {"gpu_available": False, "torch_not_available": True}
+        
+        return {
+            "status": "healthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "system_metrics": {
+                "cpu_percent": cpu_percent,
+                "memory_percent": memory.percent,
+                "memory_available_gb": memory.available / (1024**3),
+                "disk_percent": (disk.used / disk.total) * 100,
+                "disk_free_gb": disk.free / (1024**3),
+                "network_bytes_sent": network.bytes_sent,
+                "network_bytes_recv": network.bytes_recv,
+                "active_processes": len(psutil.pids())
+            },
+            "gpu_info": gpu_info,
+            "platform_info": {
+                "os": platform.system(),
+                "os_version": platform.release(),
+                "python_version": sys.version,
+                "architecture": platform.machine()
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get system health: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/info")
 async def get_system_info():
-    """Get system information"""
+    """Get real system information"""
     try:
-        import platform
-        import sys
-        
         # Get system information
         cpu_count = psutil.cpu_count(logical=False)
         memory = psutil.virtual_memory()
         disk = psutil.disk_usage('/')
+        
+        # Check PyTorch availability
+        torch_available = False
+        cuda_available = False
+        try:
+            import torch
+            torch_available = True
+            cuda_available = torch.cuda.is_available()
+        except ImportError:
+            pass
         
         return SystemInfoModel(
             cpu_cores=cpu_count,
             memory_gb=memory.total / (1024**3),
             disk_space_gb=disk.free / (1024**3),
             os_info=f"{platform.system()} {platform.release()}",
-            python_version=sys.version
+            python_version=sys.version,
+            torch_available=torch_available,
+            cuda_available=cuda_available
         ).dict()
         
     except Exception as e:
@@ -59,13 +125,24 @@ async def get_system_info():
 
 @router.get("/metrics")
 async def get_system_metrics():
-    """Get current system metrics"""
+    """Get current real system metrics"""
     try:
         # Get system metrics
         cpu_percent = psutil.cpu_percent(interval=1)
         memory = psutil.virtual_memory()
         disk = psutil.disk_usage('/')
         network = psutil.net_io_counters()
+        
+        # Get GPU metrics if available
+        gpu_usage = None
+        gpu_memory = None
+        try:
+            import torch
+            if torch.cuda.is_available():
+                gpu_memory = torch.cuda.memory_allocated(0) / (1024**3)
+                # GPU usage is not directly available in PyTorch, would need nvidia-ml-py
+        except ImportError:
+            pass
         
         return SystemMetricsModel(
             timestamp=datetime.utcnow(),
@@ -78,7 +155,9 @@ async def get_system_metrics():
                 "packets_sent": network.packets_sent,
                 "packets_recv": network.packets_recv
             },
-            active_processes=len(psutil.pids())
+            active_processes=len(psutil.pids()),
+            gpu_usage=gpu_usage,
+            gpu_memory=gpu_memory
         ).dict()
         
     except Exception as e:
@@ -87,273 +166,129 @@ async def get_system_metrics():
 
 @router.get("/performance")
 async def get_system_performance():
-    """Get comprehensive system performance"""
+    """Get comprehensive real system performance"""
     try:
-        # Get training service performance
-        training_performance = await training_service.get_system_performance()
-        
-        # Get database info
-        db_info = db_manager.get_database_info()
-        
         # Get system metrics
         system_metrics = await get_system_metrics()
         
+        # Get process-specific metrics
+        current_process = psutil.Process()
+        process_metrics = {
+            "cpu_percent": current_process.cpu_percent(),
+            "memory_percent": current_process.memory_percent(),
+            "memory_rss_mb": current_process.memory_info().rss / (1024**2),
+            "memory_vms_mb": current_process.memory_info().vms / (1024**2),
+            "num_threads": current_process.num_threads(),
+            "create_time": datetime.fromtimestamp(current_process.create_time()).isoformat()
+        }
+        
+        # Get network performance
+        network_metrics = {
+            "connections": len(current_process.connections()),
+            "open_files": len(current_process.open_files())
+        }
+        
         return {
+            "timestamp": datetime.utcnow().isoformat(),
             "system_metrics": system_metrics,
-            "training_performance": training_performance,
-            "database_info": db_info,
-            "timestamp": datetime.utcnow().isoformat()
+            "process_metrics": process_metrics,
+            "network_metrics": network_metrics,
+            "performance_score": _calculate_performance_score(system_metrics, process_metrics)
         }
         
     except Exception as e:
         logger.error(f"Failed to get system performance: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/health")
-async def system_health_check():
-    """Comprehensive system health check"""
+def _calculate_performance_score(system_metrics: Dict, process_metrics: Dict) -> float:
+    """Calculate overall performance score"""
     try:
-        health_status = {
-            "overall_status": "healthy",
-            "components": {},
-            "timestamp": datetime.utcnow().isoformat()
+        # CPU score (lower is better)
+        cpu_score = max(0, 100 - system_metrics.get('cpu_usage', 0))
+        
+        # Memory score (lower is better)
+        memory_score = max(0, 100 - system_metrics.get('memory_usage', 0))
+        
+        # Disk score (lower is better)
+        disk_score = max(0, 100 - system_metrics.get('disk_usage', 0))
+        
+        # Process efficiency score
+        process_cpu = process_metrics.get('cpu_percent', 0)
+        process_memory = process_metrics.get('memory_percent', 0)
+        process_score = max(0, 100 - (process_cpu + process_memory) / 2)
+        
+        # Overall score (weighted average)
+        overall_score = (cpu_score * 0.3 + memory_score * 0.3 + 
+                        disk_score * 0.2 + process_score * 0.2)
+        
+        return round(overall_score, 2)
+        
+    except Exception as e:
+        logger.error(f"Failed to calculate performance score: {e}")
+        return 0.0
+
+@router.get("/resources")
+async def get_system_resources():
+    """Get detailed system resource information"""
+    try:
+        # CPU information
+        cpu_info = {
+            "physical_cores": psutil.cpu_count(logical=False),
+            "logical_cores": psutil.cpu_count(logical=True),
+            "cpu_freq": psutil.cpu_freq()._asdict() if psutil.cpu_freq() else None,
+            "cpu_percent_per_core": psutil.cpu_percent(percpu=True, interval=1)
         }
         
-        # Check database
-        try:
-            db_healthy = db_manager.test_connection()
-            health_status["components"]["database"] = {
-                "status": "healthy" if db_healthy else "unhealthy",
-                "message": "Connected" if db_healthy else "Connection failed"
-            }
-        except Exception as e:
-            health_status["components"]["database"] = {
-                "status": "unhealthy",
-                "message": str(e)
-            }
-        
-        # Check system resources
-        try:
-            memory = psutil.virtual_memory()
-            disk = psutil.disk_usage('/')
-            
-            memory_healthy = memory.percent < 90
-            disk_healthy = (disk.used / disk.total) * 100 < 90
-            
-            health_status["components"]["system_resources"] = {
-                "status": "healthy" if memory_healthy and disk_healthy else "warning",
-                "memory_usage": memory.percent,
-                "disk_usage": (disk.used / disk.total) * 100,
-                "message": "Resources available" if memory_healthy and disk_healthy else "High resource usage"
-            }
-        except Exception as e:
-            health_status["components"]["system_resources"] = {
-                "status": "unhealthy",
-                "message": str(e)
-            }
-        
-        # Check training service
-        try:
-            training_sessions = await training_service.list_training_sessions()
-            health_status["components"]["training_service"] = {
-                "status": "healthy",
-                "active_sessions": len([s for s in training_sessions if s.get('status') == 'running']),
-                "total_sessions": len(training_sessions),
-                "message": "Training service operational"
-            }
-        except Exception as e:
-            health_status["components"]["training_service"] = {
-                "status": "unhealthy",
-                "message": str(e)
-            }
-        
-        # Determine overall status
-        component_statuses = [comp["status"] for comp in health_status["components"].values()]
-        if "unhealthy" in component_statuses:
-            health_status["overall_status"] = "unhealthy"
-        elif "warning" in component_statuses:
-            health_status["overall_status"] = "warning"
-        
-        return health_status
-        
-    except Exception as e:
-        logger.error(f"Health check failed: {e}")
-        return {
-            "overall_status": "unhealthy",
-            "error": str(e),
-            "timestamp": datetime.utcnow().isoformat()
-        }
-
-@router.post("/optimize")
-async def optimize_system():
-    """Optimize system for training"""
-    try:
-        optimization_results = await training_service.optimize_system_for_training()
-        
-        return {
-            "message": "System optimization completed",
-            "results": optimization_results,
-            "timestamp": datetime.utcnow().isoformat()
+        # Memory information
+        memory = psutil.virtual_memory()
+        swap = psutil.swap_memory()
+        memory_info = {
+            "total_gb": memory.total / (1024**3),
+            "available_gb": memory.available / (1024**3),
+            "used_gb": memory.used / (1024**3),
+            "percent": memory.percent,
+            "swap_total_gb": swap.total / (1024**3),
+            "swap_used_gb": swap.used / (1024**3),
+            "swap_percent": swap.percent
         }
         
-    except Exception as e:
-        logger.error(f"Failed to optimize system: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.get("/logs")
-async def get_system_logs(lines: int = 100):
-    """Get system logs"""
-    try:
-        log_file = "persian_ai_backend.log"
-        
-        if not os.path.exists(log_file):
-            return {"message": "No log file found", "logs": []}
-        
-        # Read last N lines from log file
-        with open(log_file, 'r', encoding='utf-8') as f:
-            all_lines = f.readlines()
-            recent_lines = all_lines[-lines:] if len(all_lines) > lines else all_lines
-        
-        return {
-            "log_file": log_file,
-            "lines_requested": lines,
-            "lines_returned": len(recent_lines),
-            "logs": [line.strip() for line in recent_lines]
-        }
-        
-    except Exception as e:
-        logger.error(f"Failed to get system logs: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.get("/database/stats")
-async def get_database_stats():
-    """Get database statistics"""
-    try:
-        # Get table statistics
-        table_stats = db_manager.get_table_stats()
-        
-        # Get database info
-        db_info = db_manager.get_database_info()
-        
-        return {
-            "database_info": db_info,
-            "table_stats": table_stats,
-            "timestamp": datetime.utcnow().isoformat()
-        }
-        
-    except Exception as e:
-        logger.error(f"Failed to get database stats: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.post("/database/cleanup")
-async def cleanup_database(days: int = 30):
-    """Cleanup old database records"""
-    try:
-        cleaned_records = db_manager.cleanup_old_data(days)
-        
-        return {
-            "message": f"Database cleanup completed",
-            "records_cleaned": cleaned_records,
-            "days_threshold": days,
-            "timestamp": datetime.utcnow().isoformat()
-        }
-        
-    except Exception as e:
-        logger.error(f"Failed to cleanup database: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.post("/database/backup")
-async def backup_database():
-    """Backup database"""
-    try:
-        backup_path = f"backups/persian_ai_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
-        os.makedirs("backups", exist_ok=True)
-        
-        success = db_manager.backup_database(backup_path)
-        
-        if success:
-            return {
-                "message": "Database backup completed",
-                "backup_path": backup_path,
-                "timestamp": datetime.utcnow().isoformat()
-            }
-        else:
-            raise HTTPException(status_code=500, detail="Backup failed")
-            
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to backup database: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.post("/database/optimize")
-async def optimize_database():
-    """Optimize database performance"""
-    try:
-        success = db_manager.optimize_database()
-        
-        if success:
-            return {
-                "message": "Database optimization completed",
-                "timestamp": datetime.utcnow().isoformat()
-            }
-        else:
-            raise HTTPException(status_code=500, detail="Optimization failed")
-            
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to optimize database: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.get("/processes")
-async def get_active_processes():
-    """Get information about active processes"""
-    try:
-        processes = []
-        
-        for proc in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_percent', 'status']):
+        # Disk information
+        disk_info = {}
+        for partition in psutil.disk_partitions():
             try:
-                proc_info = proc.info
-                processes.append(proc_info)
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                partition_usage = psutil.disk_usage(partition.mountpoint)
+                disk_info[partition.mountpoint] = {
+                    "device": partition.device,
+                    "fstype": partition.fstype,
+                    "total_gb": partition_usage.total / (1024**3),
+                    "used_gb": partition_usage.used / (1024**3),
+                    "free_gb": partition_usage.free / (1024**3),
+                    "percent": (partition_usage.used / partition_usage.total) * 100
+                }
+            except PermissionError:
                 continue
         
-        # Sort by CPU usage
-        processes.sort(key=lambda x: x.get('cpu_percent', 0), reverse=True)
+        # Network information
+        network = psutil.net_io_counters()
+        network_info = {
+            "bytes_sent": network.bytes_sent,
+            "bytes_recv": network.bytes_recv,
+            "packets_sent": network.packets_sent,
+            "packets_recv": network.packets_recv,
+            "errin": network.errin,
+            "errout": network.errout,
+            "dropin": network.dropin,
+            "dropout": network.dropout
+        }
         
         return {
-            "total_processes": len(processes),
-            "top_processes": processes[:20],  # Top 20 by CPU usage
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.utcnow().isoformat(),
+            "cpu_info": cpu_info,
+            "memory_info": memory_info,
+            "disk_info": disk_info,
+            "network_info": network_info
         }
         
     except Exception as e:
-        logger.error(f"Failed to get active processes: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.get("/network")
-async def get_network_info():
-    """Get network information"""
-    try:
-        network_stats = psutil.net_io_counters()
-        network_connections = psutil.net_connections()
-        
-        return {
-            "network_io": {
-                "bytes_sent": network_stats.bytes_sent,
-                "bytes_recv": network_stats.bytes_recv,
-                "packets_sent": network_stats.packets_sent,
-                "packets_recv": network_stats.packets_recv,
-                "errin": network_stats.errin,
-                "errout": network_stats.errout,
-                "dropin": network_stats.dropin,
-                "dropout": network_stats.dropout
-            },
-            "active_connections": len(network_connections),
-            "timestamp": datetime.utcnow().isoformat()
-        }
-        
-    except Exception as e:
-        logger.error(f"Failed to get network info: {e}")
+        logger.error(f"Failed to get system resources: {e}")
         raise HTTPException(status_code=500, detail=str(e))

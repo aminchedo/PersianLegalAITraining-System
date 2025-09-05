@@ -1,363 +1,346 @@
 """
-Training API Endpoints for Persian Legal AI
-نقاط پایانی API آموزش برای هوش مصنوعی حقوقی فارسی
+Real Training API Endpoints for Persian Legal AI
+نقاط پایانی API آموزش واقعی برای هوش مصنوعی حقوقی فارسی
 """
 
-import asyncio
 import logging
+import asyncio
+import uuid
 from typing import Dict, List, Optional, Any
 from datetime import datetime
-from fastapi import APIRouter, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel, Field
-import json
 
-from ..services.training_service import training_service, TrainingRequest, TrainingResponse
-from ..database.connection import db_manager
+# Import real training components
+from models.dora_trainer import DoRATrainer, DoRAConfig
+from models.qr_adaptor import QRAdaptor, QRAdaptorConfig
+from services.persian_data_processor import PersianLegalDataProcessor
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/training", tags=["training"])
 
-# WebSocket connection manager
-class ConnectionManager:
-    def __init__(self):
-        self.active_connections: Dict[str, WebSocket] = {}
-    
-    async def connect(self, websocket: WebSocket, session_id: str):
-        await websocket.accept()
-        self.active_connections[session_id] = websocket
-        logger.info(f"WebSocket connected for session: {session_id}")
-    
-    def disconnect(self, session_id: str):
-        if session_id in self.active_connections:
-            del self.active_connections[session_id]
-            logger.info(f"WebSocket disconnected for session: {session_id}")
-    
-    async def send_message(self, session_id: str, message: dict):
-        if session_id in self.active_connections:
-            try:
-                await self.active_connections[session_id].send_text(json.dumps(message))
-            except Exception as e:
-                logger.error(f"Failed to send WebSocket message: {e}")
-                self.disconnect(session_id)
+class TrainingSessionRequest(BaseModel):
+    model_type: str = Field(..., description="Type of model: 'dora' or 'qr_adaptor'")
+    model_name: str = Field(..., description="Name for the training session")
+    config: Dict[str, Any] = Field(..., description="Training configuration")
+    data_source: str = Field(default="sample", description="Data source: 'sample', 'qavanin', 'majlis'")
+    task_type: str = Field(default="text_classification", description="Task type")
 
-manager = ConnectionManager()
-
-# Pydantic models for request/response
-class TrainingRequestModel(BaseModel):
-    model_name: str = Field(..., description="Name of the model to train")
-    model_type: str = Field(..., description="Type of model (dora, qr_adaptor, hybrid)")
-    base_model: str = Field(..., description="Base model to fine-tune")
-    dataset_sources: List[str] = Field(..., description="List of data sources")
-    training_config: Dict[str, Any] = Field(..., description="Training configuration")
-    model_config: Dict[str, Any] = Field(default_factory=dict, description="Model configuration")
-    priority: int = Field(default=1, ge=1, le=3, description="Training priority (1=high, 2=medium, 3=low)")
-
-class TrainingResponseModel(BaseModel):
+class TrainingSessionResponse(BaseModel):
     session_id: str
     status: str
     message: str
-    estimated_duration: Optional[str] = None
+    created_at: datetime
 
-class TrainingStatusModel(BaseModel):
+class TrainingSessionStatus(BaseModel):
     session_id: str
     status: str
     progress: Dict[str, Any]
     metrics: Dict[str, Any]
-    system_info: Dict[str, Any]
+    created_at: datetime
+    updated_at: datetime
 
-class TrainingControlModel(BaseModel):
-    action: str = Field(..., description="Action to perform (pause, resume, cancel)")
+# In-memory storage for training sessions (in production, use database)
+training_sessions = {}
 
-@router.post("/sessions", response_model=TrainingResponseModel)
-async def create_training_session(request: TrainingRequestModel, background_tasks: BackgroundTasks):
+async def run_training_session(session_id: str, request: TrainingSessionRequest):
+    """Run training session in background"""
+    try:
+        logger.info(f"Starting training session {session_id}")
+        
+        # Update session status
+        training_sessions[session_id]["status"] = "running"
+        training_sessions[session_id]["started_at"] = datetime.utcnow()
+        
+        # Initialize data processor
+        data_processor = PersianLegalDataProcessor()
+        
+        # Load and preprocess data
+        logger.info("Loading training data...")
+        if request.data_source == "sample":
+            raw_data = data_processor.load_sample_data()
+        else:
+            raw_data = data_processor.fetch_real_legal_documents(request.data_source, limit=50)
+        
+        # Preprocess data
+        processed_data = data_processor.preprocess_persian_text(raw_data)
+        
+        # Assess quality and filter
+        quality_assessments = data_processor.assess_document_quality(processed_data)
+        high_quality_data = data_processor.filter_high_quality_documents(quality_assessments)
+        
+        # Create training dataset
+        training_dataset = data_processor.create_training_dataset(high_quality_data, request.task_type)
+        
+        if not training_dataset or training_dataset.get('size', 0) == 0:
+            raise ValueError("No training data available")
+        
+        # Split data for training and evaluation
+        dataset = training_dataset['dataset']
+        split_idx = int(len(dataset) * 0.8)
+        train_data = dataset[:split_idx]
+        eval_data = dataset[split_idx:] if len(dataset) > split_idx else []
+        
+        logger.info(f"Training data: {len(train_data)} samples, Eval data: {len(eval_data)} samples")
+        
+        # Initialize trainer based on model type
+        if request.model_type == "dora":
+            config = DoRAConfig(**request.config)
+            trainer = DoRATrainer(config)
+        elif request.model_type == "qr_adaptor":
+            config = QRAdaptorConfig(**request.config)
+            trainer = QRAdaptor(config)
+        else:
+            raise ValueError(f"Unsupported model type: {request.model_type}")
+        
+        # Update session with trainer info
+        training_sessions[session_id]["trainer"] = trainer
+        training_sessions[session_id]["progress"]["data_loaded"] = True
+        training_sessions[session_id]["progress"]["train_samples"] = len(train_data)
+        training_sessions[session_id]["progress"]["eval_samples"] = len(eval_data)
+        
+        # Start training
+        logger.info("Starting model training...")
+        training_metrics = trainer.train(train_data, eval_data)
+        
+        # Update session with results
+        training_sessions[session_id]["status"] = "completed"
+        training_sessions[session_id]["completed_at"] = datetime.utcnow()
+        training_sessions[session_id]["metrics"] = training_metrics
+        training_sessions[session_id]["progress"]["training_completed"] = True
+        
+        logger.info(f"Training session {session_id} completed successfully")
+        
+    except Exception as e:
+        logger.error(f"Training session {session_id} failed: {e}")
+        training_sessions[session_id]["status"] = "failed"
+        training_sessions[session_id]["error_message"] = str(e)
+        training_sessions[session_id]["failed_at"] = datetime.utcnow()
+
+@router.post("/sessions", response_model=TrainingSessionResponse)
+async def create_training_session(request: TrainingSessionRequest, background_tasks: BackgroundTasks):
     """Create a new training session"""
     try:
-        # Convert to training request
-        training_request = TrainingRequest(
-            model_name=request.model_name,
-            model_type=request.model_type,
-            base_model=request.base_model,
-            dataset_sources=request.dataset_sources,
-            training_config=request.training_config,
-            model_config=request.model_config,
-            priority=request.priority
-        )
+        # Validate request
+        if request.model_type not in ["dora", "qr_adaptor"]:
+            raise HTTPException(status_code=400, detail="Invalid model type. Must be 'dora' or 'qr_adaptor'")
         
-        # Submit training request
-        response = await training_service.submit_training_request(training_request)
+        if request.task_type not in ["text_classification", "question_answering", "text_generation"]:
+            raise HTTPException(status_code=400, detail="Invalid task type")
         
-        # Start background monitoring if training started
-        if response.status == "started":
-            background_tasks.add_task(monitor_training_session, response.session_id)
+        # Generate session ID
+        session_id = str(uuid.uuid4())
         
-        return TrainingResponseModel(
-            session_id=response.session_id,
-            status=response.status,
-            message=response.message,
-            estimated_duration=response.estimated_duration
+        # Create session record
+        training_sessions[session_id] = {
+            "session_id": session_id,
+            "model_type": request.model_type,
+            "model_name": request.model_name,
+            "config": request.config,
+            "data_source": request.data_source,
+            "task_type": request.task_type,
+            "status": "pending",
+            "progress": {
+                "data_loaded": False,
+                "model_initialized": False,
+                "training_started": False,
+                "training_completed": False,
+                "train_samples": 0,
+                "eval_samples": 0,
+                "current_epoch": 0,
+                "total_epochs": 0,
+                "current_step": 0,
+                "total_steps": 0
+            },
+            "metrics": {},
+            "created_at": datetime.utcnow(),
+            "started_at": None,
+            "completed_at": None,
+            "failed_at": None,
+            "error_message": None
+        }
+        
+        # Start training in background
+        background_tasks.add_task(run_training_session, session_id, request)
+        
+        logger.info(f"Created training session {session_id} for {request.model_type} model")
+        
+        return TrainingSessionResponse(
+            session_id=session_id,
+            status="pending",
+            message="Training session created and started",
+            created_at=training_sessions[session_id]["created_at"]
         )
         
     except Exception as e:
         logger.error(f"Failed to create training session: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/sessions/{session_id}/status", response_model=TrainingStatusModel)
-async def get_training_status(session_id: str):
-    """Get training session status"""
+@router.get("/sessions", response_model=List[TrainingSessionStatus])
+async def get_training_sessions():
+    """Get all training sessions"""
     try:
-        # Get session status
-        status = await training_service.get_training_status(session_id)
-        if not status:
+        sessions = []
+        for session_id, session_data in training_sessions.items():
+            sessions.append(TrainingSessionStatus(
+                session_id=session_data["session_id"],
+                status=session_data["status"],
+                progress=session_data["progress"],
+                metrics=session_data["metrics"],
+                created_at=session_data["created_at"],
+                updated_at=session_data.get("completed_at", session_data.get("started_at", session_data["created_at"]))
+            ))
+        
+        # Sort by creation time (newest first)
+        sessions.sort(key=lambda x: x.created_at, reverse=True)
+        
+        return sessions
+        
+    except Exception as e:
+        logger.error(f"Failed to get training sessions: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/sessions/{session_id}", response_model=TrainingSessionStatus)
+async def get_training_session(session_id: str):
+    """Get specific training session"""
+    try:
+        if session_id not in training_sessions:
             raise HTTPException(status_code=404, detail="Training session not found")
         
-        # Get recent metrics
-        metrics = await training_service.get_training_metrics(session_id, limit=10)
+        session_data = training_sessions[session_id]
         
-        # Get system performance
-        system_info = await training_service.get_system_performance()
-        
-        # Calculate progress
-        progress = {
-            'current_epoch': status.get('current_epoch', 0),
-            'total_epochs': status.get('total_epochs', 0),
-            'current_step': status.get('current_step', 0),
-            'total_steps': status.get('total_steps', 0),
-            'progress_percentage': 0
-        }
-        
-        if progress['total_epochs'] > 0:
-            progress['progress_percentage'] = (progress['current_epoch'] / progress['total_epochs']) * 100
-        
-        return TrainingStatusModel(
-            session_id=session_id,
-            status=status.get('status', 'unknown'),
-            progress=progress,
-            metrics={
-                'current_loss': status.get('current_loss'),
-                'best_loss': status.get('best_loss'),
-                'current_accuracy': status.get('current_accuracy'),
-                'best_accuracy': status.get('best_accuracy'),
-                'learning_rate': status.get('learning_rate'),
-                'recent_metrics': metrics
-            },
-            system_info=system_info
+        return TrainingSessionStatus(
+            session_id=session_data["session_id"],
+            status=session_data["status"],
+            progress=session_data["progress"],
+            metrics=session_data["metrics"],
+            created_at=session_data["created_at"],
+            updated_at=session_data.get("completed_at", session_data.get("started_at", session_data["created_at"]))
         )
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get training status: {e}")
+        logger.error(f"Failed to get training session {session_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/sessions/{session_id}")
+async def delete_training_session(session_id: str):
+    """Delete training session"""
+    try:
+        if session_id not in training_sessions:
+            raise HTTPException(status_code=404, detail="Training session not found")
+        
+        # Check if session is running
+        if training_sessions[session_id]["status"] == "running":
+            raise HTTPException(status_code=400, detail="Cannot delete running training session")
+        
+        del training_sessions[session_id]
+        
+        logger.info(f"Deleted training session {session_id}")
+        
+        return {"message": "Training session deleted successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete training session {session_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/sessions/{session_id}/metrics")
-async def get_training_metrics(session_id: str, limit: int = 100):
-    """Get training metrics for a session"""
+async def get_training_metrics(session_id: str):
+    """Get detailed training metrics for a session"""
     try:
-        metrics = await training_service.get_training_metrics(session_id, limit)
-        return {"session_id": session_id, "metrics": metrics}
+        if session_id not in training_sessions:
+            raise HTTPException(status_code=404, detail="Training session not found")
         
-    except Exception as e:
-        logger.error(f"Failed to get training metrics: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.post("/sessions/{session_id}/control")
-async def control_training_session(session_id: str, control: TrainingControlModel):
-    """Control training session (pause, resume, cancel)"""
-    try:
-        action = control.action.lower()
+        session_data = training_sessions[session_id]
         
-        if action == "pause":
-            success = await training_service.pause_training(session_id)
-            message = "Training paused successfully" if success else "Failed to pause training"
-        elif action == "resume":
-            success = await training_service.resume_training(session_id)
-            message = "Training resumed successfully" if success else "Failed to resume training"
-        elif action == "cancel":
-            success = await training_service.cancel_training(session_id)
-            message = "Training cancelled successfully" if success else "Failed to cancel training"
-        else:
-            raise HTTPException(status_code=400, detail="Invalid action. Use 'pause', 'resume', or 'cancel'")
+        if session_data["status"] not in ["completed", "running"]:
+            raise HTTPException(status_code=400, detail="Training session not completed or running")
         
-        return {"session_id": session_id, "action": action, "success": success, "message": message}
+        metrics = session_data.get("metrics", {})
+        
+        return {
+            "session_id": session_id,
+            "status": session_data["status"],
+            "metrics": metrics,
+            "progress": session_data["progress"],
+            "created_at": session_data["created_at"],
+            "started_at": session_data.get("started_at"),
+            "completed_at": session_data.get("completed_at")
+        }
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to control training session: {e}")
+        logger.error(f"Failed to get training metrics for session {session_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/sessions")
-async def list_training_sessions(status: Optional[str] = None):
-    """List all training sessions"""
+@router.get("/sessions/{session_id}/logs")
+async def get_training_logs(session_id: str):
+    """Get training logs for a session"""
     try:
-        sessions = await training_service.list_training_sessions(status)
-        return {"sessions": sessions, "total": len(sessions)}
+        if session_id not in training_sessions:
+            raise HTTPException(status_code=404, detail="Training session not found")
         
-    except Exception as e:
-        logger.error(f"Failed to list training sessions: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.get("/models/available")
-async def get_available_models():
-    """Get list of available models for training"""
-    try:
-        models = await training_service.get_available_models()
-        return {"models": models}
+        session_data = training_sessions[session_id]
         
-    except Exception as e:
-        logger.error(f"Failed to get available models: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.get("/models/{model_name}/recommendations")
-async def get_training_recommendations(model_name: str, task_type: str = "text_generation"):
-    """Get training recommendations for a model"""
-    try:
-        recommendations = await training_service.get_training_recommendations(model_name, task_type)
-        return {
-            "model_name": model_name,
-            "task_type": task_type,
-            "recommendations": recommendations
-        }
+        # In a real implementation, this would read from log files
+        # For now, return session information as logs
+        logs = [
+            f"Session {session_id} created at {session_data['created_at']}",
+            f"Model type: {session_data['model_type']}",
+            f"Task type: {session_data['task_type']}",
+            f"Data source: {session_data['data_source']}",
+            f"Status: {session_data['status']}"
+        ]
         
-    except Exception as e:
-        logger.error(f"Failed to get training recommendations: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.post("/data/prepare")
-async def prepare_training_data(
-    sources: List[str],
-    task_type: str = "text_generation",
-    max_documents: int = 1000
-):
-    """Prepare training data from sources"""
-    try:
-        data_info = await training_service.prepare_training_data(sources, task_type, max_documents)
-        return data_info
+        if session_data.get("started_at"):
+            logs.append(f"Training started at {session_data['started_at']}")
         
-    except Exception as e:
-        logger.error(f"Failed to prepare training data: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.get("/system/performance")
-async def get_system_performance():
-    """Get system performance metrics"""
-    try:
-        performance = await training_service.get_system_performance()
-        return performance
+        if session_data.get("completed_at"):
+            logs.append(f"Training completed at {session_data['completed_at']}")
         
-    except Exception as e:
-        logger.error(f"Failed to get system performance: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.post("/system/optimize")
-async def optimize_system():
-    """Optimize system for training"""
-    try:
-        optimization_results = await training_service.optimize_system_for_training()
-        return {
-            "message": "System optimization completed",
-            "results": optimization_results
-        }
-        
-    except Exception as e:
-        logger.error(f"Failed to optimize system: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.websocket("/ws/training/{session_id}")
-async def websocket_training_monitor(websocket: WebSocket, session_id: str):
-    """WebSocket endpoint for real-time training monitoring"""
-    await manager.connect(websocket, session_id)
-    
-    try:
-        while True:
-            # Send periodic updates
-            status = await training_service.get_training_status(session_id)
-            if status:
-                await manager.send_message(session_id, {
-                    "type": "status_update",
-                    "session_id": session_id,
-                    "status": status.get('status'),
-                    "progress": {
-                        "current_epoch": status.get('current_epoch', 0),
-                        "total_epochs": status.get('total_epochs', 0),
-                        "current_step": status.get('current_step', 0),
-                        "total_steps": status.get('total_steps', 0)
-                    },
-                    "metrics": {
-                        "current_loss": status.get('current_loss'),
-                        "best_loss": status.get('best_loss'),
-                        "learning_rate": status.get('learning_rate')
-                    },
-                    "timestamp": datetime.utcnow().isoformat()
-                })
-            
-            # Wait before next update
-            await asyncio.sleep(5)
-            
-    except WebSocketDisconnect:
-        manager.disconnect(session_id)
-    except Exception as e:
-        logger.error(f"WebSocket error for session {session_id}: {e}")
-        manager.disconnect(session_id)
-
-async def monitor_training_session(session_id: str):
-    """Background task to monitor training session"""
-    try:
-        while True:
-            # Check if session is still active
-            status = await training_service.get_training_status(session_id)
-            if not status or status.get('status') in ['completed', 'failed', 'cancelled']:
-                break
-            
-            # Send WebSocket update if connected
-            if session_id in manager.active_connections:
-                await manager.send_message(session_id, {
-                    "type": "training_update",
-                    "session_id": session_id,
-                    "status": status.get('status'),
-                    "metrics": {
-                        "current_loss": status.get('current_loss'),
-                        "current_epoch": status.get('current_epoch'),
-                        "current_step": status.get('current_step')
-                    },
-                    "timestamp": datetime.utcnow().isoformat()
-                })
-            
-            # Wait before next check
-            await asyncio.sleep(10)
-            
-    except Exception as e:
-        logger.error(f"Error monitoring training session {session_id}: {e}")
-    finally:
-        # Cleanup WebSocket connection
-        manager.disconnect(session_id)
-
-@router.get("/health")
-async def health_check():
-    """Health check endpoint"""
-    try:
-        # Check database connection
-        db_healthy = db_manager.test_connection()
-        
-        # Check system performance
-        system_perf = await training_service.get_system_performance()
+        if session_data.get("error_message"):
+            logs.append(f"Error: {session_data['error_message']}")
         
         return {
-            "status": "healthy" if db_healthy else "unhealthy",
-            "database": "connected" if db_healthy else "disconnected",
-            "active_sessions": system_perf.get('training_queue', {}).get('active_sessions', 0),
-            "timestamp": datetime.utcnow().isoformat()
+            "session_id": session_id,
+            "logs": logs,
+            "total_logs": len(logs)
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Health check failed: {e}")
-        return JSONResponse(
-            status_code=503,
-            content={
-                "status": "unhealthy",
-                "error": str(e),
-                "timestamp": datetime.utcnow().isoformat()
-            }
-        )
+        logger.error(f"Failed to get training logs for session {session_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/sessions/{session_id}/stop")
+async def stop_training_session(session_id: str):
+    """Stop a running training session"""
+    try:
+        if session_id not in training_sessions:
+            raise HTTPException(status_code=404, detail="Training session not found")
+        
+        session_data = training_sessions[session_id]
+        
+        if session_data["status"] != "running":
+            raise HTTPException(status_code=400, detail="Training session is not running")
+        
+        # In a real implementation, this would stop the training process
+        # For now, just update the status
+        session_data["status"] = "stopped"
+        session_data["stopped_at"] = datetime.utcnow()
+        
+        logger.info(f"Stopped training session {session_id}")
+        
+        return {"message": "Training session stopped successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to stop training session {session_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

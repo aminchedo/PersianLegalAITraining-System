@@ -1,70 +1,66 @@
-# Core ML/AI Dependencies
-torch==2.1.2
-intel-extension-for-pytorch==2.1.2
-transformers==4.36.2
-datasets==2.16.1
-accelerate==0.25.0
-peft==0.7.1
-bitsandbytes==0.42.0
-scipy==1.11.4
-numpy==1.24.4
-scikit-learn==1.3.2
+# Persian Legal AI Training System - Complete Requirements
+# سیستم آموزش هوش مصنوعی حقوقی فارسی - وابستگی‌های کامل
 
-# Persian NLP and Text Processing
-spacy==3.7.2
-nltk==3.8.1
-hazm==0.7.0
-polyglot==16.7.4
-textblob==0.17.1
-gensim==4.3.2
-sentence-transformers==2.2.2
+# Core ML/AI Libraries
+torch>=2.0.0
+transformers>=4.30.0
+peft>=0.4.0
+accelerate>=0.20.0
+datasets>=2.12.0
+tokenizers>=0.13.0
 
-# Data Collection and Processing
-requests==2.31.0
-beautifulsoup4==4.12.2
-scrapy==2.11.0
-selenium==4.16.0
-lxml==4.9.4
-pandas==2.1.4
-openpyxl==3.1.2
+# Persian NLP
+hazm>=0.7.0
+parsbert>=0.1.0
 
-# Web Interface and Monitoring
-streamlit==1.29.0
-plotly==5.17.0
-dash==2.16.1
-fastapi==0.105.0
-uvicorn==0.25.0
-gradio==4.12.0
+# Quantization (Optional)
+bitsandbytes>=0.41.0
 
-# System Optimization
-psutil==5.9.6
-memory-profiler==0.61.0
-py-cpuinfo==9.0.0
-nvidia-ml-py3==7.352.0
-mimalloc==2.0.9
+# Web Framework
+fastapi>=0.100.0
+uvicorn[standard]>=0.22.0
+pydantic>=2.0.0
 
-# Windows-specific
-pywin32==306
-wmi==1.5.1
-pypiwin32==223
+# Database
+sqlalchemy>=2.0.0
+alembic>=1.11.0
 
-# Database and Storage
-sqlite3
-sqlalchemy==2.0.23
-redis==5.0.1
-pymongo==4.6.1
+# Data Processing
+pandas>=2.0.0
+numpy>=1.24.0
+scikit-learn>=1.3.0
 
-# Utilities
-tqdm==4.66.1
-colorama==0.4.6
-python-dotenv==1.0.0
-pyyaml==6.0.1
-jsonschema==4.20.0
-click==8.1.7
-loguru==0.7.2
+# Web Scraping
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+aiohttp>=3.8.0
 
-# Development and Testing
-pytest==7.4.3
-black==23.12.0
-flake8==6.1.0
-mypy==1.8.0
+# System Monitoring
+psutil>=5.9.0
+
+# Logging
+loguru>=0.7.0
+
+# Progress Bars
+tqdm>=4.65.0
+
+# Configuration
+python-dotenv>=1.0.0
+
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+
+# Development
+black>=23.0.0
+flake8>=6.0.0
+mypy>=1.4.0
+
+# Frontend Dependencies (for TypeScript React)
+# Note: These are typically installed via npm/yarn
+# @types/react
+# @types/react-dom
+# typescript
+# vite
+# react
+# react-dom

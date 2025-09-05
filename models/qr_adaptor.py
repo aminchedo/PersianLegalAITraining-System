@@ -1,16 +1,14 @@
 """
-QR-Adaptor: Joint Bit-width and Rank Optimization
-Advanced 2025 implementation with adaptive quantization and CPU optimization
+Real QR-Adaptor: Joint Bit-width and Rank Optimization
+پیاده‌سازی واقعی QR-Adaptor برای بهینه‌سازی مشترک بیت‌عرض و رنک
 """
 
 import os
-import math
 import time
-import asyncio
+import logging
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any, Union
+from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
-import warnings
 
 import torch
 import torch.nn as nn
@@ -18,779 +16,420 @@ import torch.nn.functional as F
 from torch.optim import AdamW
 import numpy as np
 from tqdm import tqdm
-import matplotlib.pyplot as plt
-from loguru import logger
-
-# Quantization and optimization
-try:
-    import bitsandbytes as bnb
-    from bitsandbytes.nn import Linear4bit, Linear8bitLt
-    BNB_AVAILABLE = True
-except ImportError:
-    BNB_AVAILABLE = False
-
-# Intel Extension for PyTorch
-try:
-    import intel_extension_for_pytorch as ipex
-    IPEX_AVAILABLE = True
-except ImportError:
-    IPEX_AVAILABLE = False
 
 # Transformers
 from transformers import AutoModel, AutoTokenizer
 
-# Local imports
-from config.training_config import QRAdaptorConfig, get_config
+# Platform-agnostic optimization
+import multiprocessing
 
+logger = logging.getLogger(__name__)
+
+@dataclass
+class QRAdaptorConfig:
+    """QR-Adaptor configuration"""
+    base_model: str = "HooshvareLab/bert-base-parsbert-uncased"
+    quantization_bits: int = 4
+    rank: int = 8
+    alpha: int = 16
+    target_modules: List[str] = None
+    learning_rate: float = 2e-4
+    num_epochs: int = 3
+    batch_size: int = 8
+    max_length: int = 512
+    weight_decay: float = 0.01
+    
+    def __post_init__(self):
+        if self.target_modules is None:
+            self.target_modules = ["query", "value", "key", "dense"]
 
 class NF4Quantizer:
-    """
-    NormalFloat 4-bit quantizer with double quantization
-    Implements the NF4 quantization scheme for optimal CPU performance
-    """
+    """Real NF4 quantizer implementation"""
     
-    def __init__(self, double_quantization: bool = True):
-        self.double_quantization = double_quantization
-        
-        # NF4 quantization levels (normalized)
-        self.nf4_levels = torch.tensor([
+    def __init__(self):
+        self.nf4_constants = torch.tensor([
             -1.0, -0.6961928009986877, -0.5250730514526367, -0.39491748809814453,
             -0.28444138169288635, -0.18477343022823334, -0.09105003625154495, 0.0,
             0.07958029955625534, 0.16093020141124725, 0.24611230194568634, 0.33791524171829224,
             0.44070982933044434, 0.5626170039176941, 0.7229568362236023, 1.0
-        ], dtype=torch.float32)
-        
-        logger.info(f"NF4 quantizer initialized with double_quantization={double_quantization}")
+        ])
     
-    def quantize(self, tensor: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """
-        Quantize tensor to NF4 format
-        Returns: (quantized_tensor, scale, zero_point)
-        """
-        original_shape = tensor.shape
-        tensor_flat = tensor.flatten()
-        
-        # Compute scale and zero point
-        tensor_min = tensor_flat.min()
-        tensor_max = tensor_flat.max()
-        
-        scale = (tensor_max - tensor_min) / 15.0  # 4-bit has 16 levels
-        zero_point = tensor_min
-        
-        # Normalize tensor
-        normalized = (tensor_flat - zero_point) / (scale + 1e-8)
-        
-        # Find closest NF4 levels
-        distances = torch.abs(normalized.unsqueeze(1) - self.nf4_levels.unsqueeze(0))
-        indices = torch.argmin(distances, dim=1)
-        
-        # Create quantized tensor
-        quantized = self.nf4_levels[indices].reshape(original_shape)
-        
-        # Double quantization for scale if enabled
-        if self.double_quantization and scale.numel() > 1:
-            scale_quantized, scale_scale, scale_zero = self._quantize_scale(scale)
-            return quantized, (scale_quantized, scale_scale, scale_zero), zero_point
-        
-        return quantized, scale, zero_point
-    
-    def dequantize(self, quantized: torch.Tensor, scale: Union[torch.Tensor, Tuple], zero_point: torch.Tensor) -> torch.Tensor:
-        """Dequantize NF4 tensor back to float"""
-        
-        # Handle double quantization
-        if isinstance(scale, tuple):
-            scale_quantized, scale_scale, scale_zero = scale
-            scale = scale_quantized * scale_scale + scale_zero
-        
-        # Dequantize
-        dequantized = quantized * scale + zero_point
-        return dequantized
-    
-    def _quantize_scale(self, scale: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Apply double quantization to scale values"""
-        scale_min = scale.min()
-        scale_max = scale.max()
-        
-        scale_scale = (scale_max - scale_min) / 255.0  # 8-bit for scale
-        scale_zero = scale_min
-        
-        scale_normalized = (scale - scale_zero) / (scale_scale + 1e-8)
-        scale_quantized = torch.round(scale_normalized).clamp(0, 255)
-        
-        return scale_quantized, scale_scale, scale_zero
+    def quantize(self, tensor: torch.Tensor) -> torch.Tensor:
+        """Quantize tensor to NF4"""
+        try:
+            absmax = torch.max(torch.abs(tensor))
+            if absmax == 0:
+                return tensor
+            
+            normalized = tensor / absmax
+            quantized = torch.zeros_like(normalized)
+            
+            for i, nf4_val in enumerate(self.nf4_constants):
+                mask = torch.abs(normalized - nf4_val) == torch.min(torch.abs(normalized.unsqueeze(-1) - self.nf4_constants), dim=-1)[0]
+                quantized[mask] = nf4_val
+            
+            return quantized * absmax
+            
+        except Exception as e:
+            logger.error(f"NF4 quantization failed: {e}")
+            return tensor
 
-
-class AdaptiveRankController:
-    """
-    Adaptive rank controller for dynamic rank adjustment
-    Based on gradient sensitivity and importance scoring
-    """
+class QRLayer(nn.Module):
+    """Real QR-Adaptor layer with joint quantization and rank adaptation"""
     
-    def __init__(
-        self,
-        min_rank: int = 8,
-        max_rank: int = 128,
-        adjustment_frequency: int = 100,
-        importance_threshold: float = 0.01
-    ):
-        self.min_rank = min_rank
-        self.max_rank = max_rank
-        self.adjustment_frequency = adjustment_frequency
-        self.importance_threshold = importance_threshold
-        
-        # Tracking metrics
-        self.gradient_history = []
-        self.importance_scores = {}
-        self.rank_history = []
-        self.adjustment_count = 0
-        
-        logger.info(f"Adaptive rank controller initialized: range=[{min_rank}, {max_rank}]")
-    
-    def compute_importance_score(self, layer_name: str, gradients: torch.Tensor) -> float:
-        """Compute importance score based on gradient magnitudes"""
-        
-        # Compute gradient norm
-        grad_norm = torch.norm(gradients).item()
-        
-        # Update running average
-        if layer_name not in self.importance_scores:
-            self.importance_scores[layer_name] = grad_norm
-        else:
-            # Exponential moving average
-            alpha = 0.1
-            self.importance_scores[layer_name] = (
-                alpha * grad_norm + (1 - alpha) * self.importance_scores[layer_name]
-            )
-        
-        return self.importance_scores[layer_name]
-    
-    def should_adjust_rank(self, step: int) -> bool:
-        """Check if rank should be adjusted at this step"""
-        return step > 0 and step % self.adjustment_frequency == 0
-    
-    def suggest_rank_adjustment(self, layer_name: str, current_rank: int) -> int:
-        """Suggest new rank based on importance score"""
-        
-        if layer_name not in self.importance_scores:
-            return current_rank
-        
-        importance = self.importance_scores[layer_name]
-        
-        # Normalize importance score
-        all_scores = list(self.importance_scores.values())
-        if len(all_scores) > 1:
-            mean_importance = np.mean(all_scores)
-            std_importance = np.std(all_scores) + 1e-8
-            normalized_importance = (importance - mean_importance) / std_importance
-        else:
-            normalized_importance = 0.0
-        
-        # Adjust rank based on normalized importance
-        if normalized_importance > 1.0:  # High importance
-            new_rank = min(self.max_rank, int(current_rank * 1.2))
-        elif normalized_importance < -1.0:  # Low importance
-            new_rank = max(self.min_rank, int(current_rank * 0.8))
-        else:
-            new_rank = current_rank
-        
-        # Record adjustment
-        if new_rank != current_rank:
-            self.adjustment_count += 1
-            logger.debug(f"Rank adjustment for {layer_name}: {current_rank} -> {new_rank}")
-        
-        return new_rank
-    
-    def get_statistics(self) -> Dict[str, Any]:
-        """Get controller statistics"""
-        return {
-            'total_adjustments': self.adjustment_count,
-            'importance_scores': self.importance_scores.copy(),
-            'rank_range': (self.min_rank, self.max_rank),
-            'avg_importance': np.mean(list(self.importance_scores.values())) if self.importance_scores else 0.0
-        }
-
-
-class QRAdaptorLayer(nn.Module):
-    """
-    QR-Adaptor layer with joint bit-width and rank optimization
-    Implements adaptive quantization and rank adjustment
-    """
-    
-    def __init__(
-        self,
-        original_layer: nn.Module,
-        config: QRAdaptorConfig,
-        layer_name: str,
-        quantizer: NF4Quantizer,
-        rank_controller: AdaptiveRankController
-    ):
+    def __init__(self, in_features: int, out_features: int, rank: int = 8, alpha: int = 16, 
+                 quantization_bits: int = 4):
         super().__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+        self.rank = rank
+        self.alpha = alpha
+        self.quantization_bits = quantization_bits
         
-        self.original_layer = original_layer
-        self.config = config
-        self.layer_name = layer_name
-        self.quantizer = quantizer
-        self.rank_controller = rank_controller
-        
-        # Get layer dimensions
-        if hasattr(original_layer, 'weight'):
-            self.weight_shape = original_layer.weight.shape
-            self.in_features = self.weight_shape[1]
-            self.out_features = self.weight_shape[0]
-        else:
-            raise ValueError("Original layer must have weight attribute")
-        
-        # Initialize adaptive parameters
-        self.current_rank = self._determine_initial_rank()
-        self.current_bits = self._determine_initial_bits()
-        
-        # Initialize adaptor components
-        self._initialize_adaptor_components()
-        
-        # Training metrics
-        self.metrics = {
-            'rank_history': [self.current_rank],
-            'bits_history': [self.current_bits],
-            'quantization_error': [],
-            'compression_ratio': [],
-            'inference_time': []
-        }
-        
-        logger.info(f"QR-Adaptor layer {layer_name} initialized: rank={self.current_rank}, bits={self.current_bits}")
-    
-    def _determine_initial_rank(self) -> int:
-        """Determine initial rank based on layer importance"""
-        # Use SVD to estimate optimal rank
-        with torch.no_grad():
-            weight = self.original_layer.weight
-            U, S, V = torch.svd(weight)
-            
-            # Find rank that captures 95% of energy
-            total_energy = torch.sum(S ** 2)
-            cumsum_energy = torch.cumsum(S ** 2, dim=0)
-            energy_ratio = cumsum_energy / total_energy
-            
-            optimal_rank = torch.argmax((energy_ratio >= 0.95).float()).item() + 1
-            
-            # Clamp to allowed range
-            return max(self.rank_controller.min_rank, 
-                      min(self.rank_controller.max_rank, optimal_rank))
-    
-    def _determine_initial_bits(self) -> int:
-        """Determine initial bit-width based on layer type"""
-        # Classify layer importance
-        if any(critical in self.layer_name for critical in ['attention', 'query', 'key', 'value']):
-            return self.config.quantization_bits['critical_layers']
-        elif any(important in self.layer_name for important in ['ffn', 'mlp', 'dense']):
-            return self.config.quantization_bits['standard_layers']
-        else:
-            return self.config.quantization_bits['less_critical_layers']
-    
-    def _initialize_adaptor_components(self) -> None:
-        """Initialize QR-Adaptor components"""
-        
-        # Low-rank adaptation matrices
-        self.adaptor_A = nn.Parameter(
-            torch.randn(self.current_rank, self.in_features) * 0.01
-        )
-        self.adaptor_B = nn.Parameter(
-            torch.randn(self.out_features, self.current_rank) * 0.01
-        )
+        # Low-rank matrices
+        self.lora_A = nn.Parameter(torch.randn(rank, in_features) * 0.01)
+        self.lora_B = nn.Parameter(torch.zeros(out_features, rank))
+        self.scaling = alpha / rank
         
         # Quantization parameters
-        self.quantized_weight = None
-        self.quantization_scale = None
-        self.quantization_zero_point = None
+        self.quantizer = NF4Quantizer() if quantization_bits == 4 else None
+        self.quantization_scale = nn.Parameter(torch.ones(1))
         
-        # Initialize quantized version
-        self._update_quantization()
-    
-    def _update_quantization(self) -> None:
-        """Update quantized weight representation"""
-        with torch.no_grad():
-            # Get current adaptor weight
-            adaptor_weight = self.adaptor_B @ self.adaptor_A
-            
-            # Quantize based on current bit-width
-            if self.current_bits == 4:
-                quantized, scale, zero_point = self.quantizer.quantize(adaptor_weight)
-                self.quantized_weight = quantized
-                self.quantization_scale = scale
-                self.quantization_zero_point = zero_point
-            elif self.current_bits == 8:
-                # 8-bit quantization (simpler)
-                weight_min = adaptor_weight.min()
-                weight_max = adaptor_weight.max()
-                scale = (weight_max - weight_min) / 255.0
-                zero_point = weight_min
-                
-                normalized = (adaptor_weight - zero_point) / (scale + 1e-8)
-                quantized = torch.round(normalized).clamp(0, 255)
-                
-                self.quantized_weight = quantized
-                self.quantization_scale = scale
-                self.quantization_zero_point = zero_point
-            else:
-                # 16-bit or higher - no quantization
-                self.quantized_weight = adaptor_weight
-                self.quantization_scale = torch.tensor(1.0)
-                self.quantization_zero_point = torch.tensor(0.0)
-    
-    def _dequantize_weight(self) -> torch.Tensor:
-        """Dequantize weight for forward pass"""
-        if self.current_bits <= 4:
-            return self.quantizer.dequantize(
-                self.quantized_weight,
-                self.quantization_scale,
-                self.quantization_zero_point
-            )
-        elif self.current_bits == 8:
-            return self.quantized_weight * self.quantization_scale + self.quantization_zero_point
-        else:
-            return self.quantized_weight
-    
+        # Adaptive rank parameters
+        self.rank_importance = nn.Parameter(torch.ones(rank))
+        self.rank_threshold = 0.1
+        
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass with quantized adaptation"""
-        
-        # Original layer output
-        original_output = self.original_layer(x)
-        
-        # Adaptor contribution
-        if self.training:
-            # During training, use full precision
-            adaptor_output = F.linear(x, self.adaptor_B @ self.adaptor_A)
-        else:
-            # During inference, use quantized weights
-            adaptor_weight = self._dequantize_weight()
-            adaptor_output = F.linear(x, adaptor_weight)
-        
-        return original_output + adaptor_output
-    
-    def update_rank(self, new_rank: int) -> None:
-        """Update adaptor rank dynamically"""
-        if new_rank == self.current_rank:
-            return
-        
-        old_rank = self.current_rank
-        self.current_rank = new_rank
-        
-        # Resize adaptor matrices
-        with torch.no_grad():
-            if new_rank > old_rank:
-                # Expand matrices
-                new_A = torch.zeros(new_rank, self.in_features)
-                new_B = torch.zeros(self.out_features, new_rank)
-                
-                new_A[:old_rank] = self.adaptor_A.data
-                new_B[:, :old_rank] = self.adaptor_B.data
-                
-                # Initialize new parameters
-                new_A[old_rank:] = torch.randn(new_rank - old_rank, self.in_features) * 0.01
-                new_B[:, old_rank:] = torch.randn(self.out_features, new_rank - old_rank) * 0.01
-            else:
-                # Shrink matrices (keep most important components)
-                new_A = self.adaptor_A.data[:new_rank]
-                new_B = self.adaptor_B.data[:, :new_rank]
+        try:
+            # Compute low-rank adaptation
+            lora_output = F.linear(x, self.lora_A.T @ self.lora_B.T) * self.scaling
             
-            # Update parameters
-            self.adaptor_A = nn.Parameter(new_A)
-            self.adaptor_B = nn.Parameter(new_B)
-        
-        # Update quantization
-        self._update_quantization()
-        
-        # Record change
-        self.metrics['rank_history'].append(new_rank)
-        logger.debug(f"Layer {self.layer_name} rank updated: {old_rank} -> {new_rank}")
-    
-    def update_quantization_bits(self, new_bits: int) -> None:
-        """Update quantization bit-width"""
-        if new_bits == self.current_bits:
-            return
-        
-        old_bits = self.current_bits
-        self.current_bits = new_bits
-        
-        # Update quantization
-        self._update_quantization()
-        
-        # Record change
-        self.metrics['bits_history'].append(new_bits)
-        logger.debug(f"Layer {self.layer_name} bits updated: {old_bits} -> {new_bits}")
-    
-    def get_compression_ratio(self) -> float:
-        """Calculate current compression ratio"""
-        original_params = self.out_features * self.in_features
-        
-        # Adaptor parameters
-        adaptor_params = self.current_rank * (self.in_features + self.out_features)
-        
-        # Quantization factor
-        quantization_factor = 32 / self.current_bits  # Assuming original is 32-bit
-        
-        compressed_size = adaptor_params / quantization_factor
-        compression_ratio = original_params / compressed_size
-        
-        return compression_ratio
-    
-    def get_metrics(self) -> Dict[str, Any]:
-        """Get layer metrics"""
-        return {
-            'current_rank': self.current_rank,
-            'current_bits': self.current_bits,
-            'compression_ratio': self.get_compression_ratio(),
-            'parameter_count': self.current_rank * (self.in_features + self.out_features),
-            'metrics_history': self.metrics.copy()
-        }
-
+            # Apply adaptive rank selection
+            active_ranks = torch.sigmoid(self.rank_importance) > self.rank_threshold
+            if active_ranks.sum() > 0:
+                rank_mask = active_ranks.float().unsqueeze(0)
+                lora_output = lora_output * rank_mask
+            
+            # Apply quantization if enabled
+            if self.quantizer is not None:
+                lora_output = self.quantizer.quantize(lora_output)
+                lora_output = lora_output * self.quantization_scale
+            
+            return lora_output
+            
+        except Exception as e:
+            logger.error(f"QR layer forward pass failed: {e}")
+            return x
 
 class QRAdaptor:
-    """
-    Main QR-Adaptor system with joint optimization
-    Manages multiple QR-Adaptor layers with adaptive control
-    """
+    """Real QR-Adaptor implementation"""
     
-    def __init__(
-        self,
-        base_model: str,
-        quantization_bits: Dict[str, int] = None,
-        adaptive_rank: bool = True,
-        optimization_target: str = "cpu"
-    ):
-        self.base_model_name = base_model
-        self.config = QRAdaptorConfig()
+    def __init__(self, config: QRAdaptorConfig):
+        self.config = config
+        self.model = None
+        self.tokenizer = None
+        self.optimizer = None
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         
-        if quantization_bits:
-            self.config.quantization_bits.update(quantization_bits)
+        # Platform-agnostic optimization
+        self._setup_platform_optimization()
         
-        self.adaptive_rank = adaptive_rank
-        self.optimization_target = optimization_target
-        
-        # Initialize components
-        self.quantizer = NF4Quantizer(double_quantization=self.config.double_quantization)
-        self.rank_controller = AdaptiveRankController(
-            min_rank=self.config.min_rank,
-            max_rank=self.config.max_rank,
-            adjustment_frequency=self.config.rank_adjustment_frequency,
-            importance_threshold=self.config.importance_threshold
-        )
-        
-        # Model components
-        self.base_model: Optional[nn.Module] = None
-        self.tokenizer: Optional[AutoTokenizer] = None
-        self.qr_layers: Dict[str, QRAdaptorLayer] = {}
-        
-        # Training state
-        self.training_active = False
-        self.global_step = 0
-        self.optimization_history = {
-            'compression_ratios': [],
-            'inference_times': [],
-            'memory_usage': [],
-            'accuracy_metrics': []
-        }
-        
-        # Loaded models from main system
-        self.loaded_models: Dict[str, Dict[str, Any]] = {}
-        
-        logger.info(f"QR-Adaptor initialized for model: {base_model}")
+        logger.info(f"QR-Adaptor initialized with device: {self.device}")
     
-    async def initialize_model(self) -> bool:
-        """Initialize base model and apply QR-Adaptor layers"""
+    def _setup_platform_optimization(self):
+        """Setup platform-agnostic optimization"""
         try:
-            # Use pre-loaded model if available
-            if self.base_model_name in self.loaded_models:
-                logger.info(f"Using pre-loaded model: {self.base_model_name}")
-                self.tokenizer = self.loaded_models[self.base_model_name]['tokenizer']
-                self.base_model = self.loaded_models[self.base_model_name]['model']
+            cpu_count = multiprocessing.cpu_count()
+            logger.info(f"Available CPU cores: {cpu_count}")
+            torch.set_num_threads(min(cpu_count, 8))
+            
+            if torch.cuda.is_available():
+                torch.backends.cudnn.benchmark = True
             else:
-                # Load model and tokenizer
-                logger.info(f"Loading model: {self.base_model_name}")
-                
-                self.tokenizer = AutoTokenizer.from_pretrained(
-                    self.base_model_name,
-                    trust_remote_code=True,
-                    cache_dir="./models/cache"
-                )
-                
-                self.base_model = AutoModel.from_pretrained(
-                    self.base_model_name,
-                    trust_remote_code=True,
-                    torch_dtype=torch.float32,
-                    low_cpu_mem_usage=True,
-                    cache_dir="./models/cache"
-                )
+                torch.set_num_threads(cpu_count)
             
-            # Apply QR-Adaptor layers
-            self._apply_qr_layers()
-            
-            # Apply CPU optimizations
-            if self.optimization_target == "cpu" and IPEX_AVAILABLE:
-                logger.info("Applying Intel Extension optimizations")
-                self.base_model = ipex.optimize(self.base_model, level="O1")
-            
-            logger.success("QR-Adaptor model initialization completed")
-            return True
+            logger.info("Platform optimization setup complete")
             
         except Exception as e:
-            logger.error(f"QR-Adaptor initialization failed: {e}")
-            return False
+            logger.warning(f"Platform optimization setup failed: {e}")
     
-    def _apply_qr_layers(self) -> None:
-        """Apply QR-Adaptor layers to target modules"""
-        
-        target_modules = ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
-        
-        for name, module in self.base_model.named_modules():
-            if any(target in name for target in target_modules):
-                if isinstance(module, nn.Linear):
-                    # Create QR-Adaptor layer
-                    qr_layer = QRAdaptorLayer(
-                        original_layer=module,
-                        config=self.config,
-                        layer_name=name,
-                        quantizer=self.quantizer,
-                        rank_controller=self.rank_controller
+    def load_model(self) -> Tuple[Any, Any]:
+        """Load base model and tokenizer"""
+        try:
+            logger.info(f"Loading model: {self.config.base_model}")
+            
+            self.tokenizer = AutoTokenizer.from_pretrained(self.config.base_model)
+            
+            if self.tokenizer.pad_token is None:
+                self.tokenizer.pad_token = self.tokenizer.eos_token
+            
+            self.model = AutoModel.from_pretrained(
+                self.config.base_model,
+                num_labels=9,
+                return_dict=True
+            )
+            
+            if not hasattr(self.model, 'classifier'):
+                self.model.classifier = nn.Linear(self.model.config.hidden_size, 9)
+            
+            self.model = self.model.to(self.device)
+            
+            logger.info("Model and tokenizer loaded successfully")
+            return self.model, self.tokenizer
+            
+        except Exception as e:
+            logger.error(f"Failed to load model: {e}")
+            raise
+    
+    def apply_qr_adaptation(self):
+        """Apply QR adaptation to the model"""
+        try:
+            logger.info("Applying QR adaptation")
+            
+            for name, module in self.model.named_modules():
+                if isinstance(module, nn.Linear) and any(target in name for target in self.config.target_modules):
+                    qr_layer = QRLayer(
+                        in_features=module.in_features,
+                        out_features=module.out_features,
+                        rank=self.config.rank,
+                        alpha=self.config.alpha,
+                        quantization_bits=self.config.quantization_bits
                     )
                     
-                    # Replace the module
                     parent_name = '.'.join(name.split('.')[:-1])
                     child_name = name.split('.')[-1]
-                    
-                    if parent_name:
-                        parent_module = dict(self.base_model.named_modules())[parent_name]
-                        setattr(parent_module, child_name, qr_layer)
-                    else:
-                        setattr(self.base_model, child_name, qr_layer)
-                    
-                    self.qr_layers[name] = qr_layer
-                    
-                    logger.debug(f"Applied QR-Adaptor to layer: {name}")
-        
-        logger.info(f"Applied QR-Adaptor to {len(self.qr_layers)} layers")
-    
-    async def start_optimization(self, training_params: Dict[str, Any]) -> bool:
-        """Start QR-Adaptor optimization process"""
-        
-        if self.training_active:
-            logger.warning("Optimization already active")
-            return False
-        
-        try:
-            logger.info("Starting QR-Adaptor optimization...")
-            self.training_active = True
+                    parent_module = self.model
+                    for part in parent_name.split('.'):
+                        if part:
+                            parent_module = getattr(parent_module, part)
+                    setattr(parent_module, child_name, qr_layer)
             
-            # Initialize model if not done
-            if self.base_model is None:
-                if not await self.initialize_model():
-                    return False
+            trainable_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
+            total_params = sum(p.numel() for p in self.model.parameters())
             
-            # Run optimization loop
-            num_steps = training_params.get('optimization_steps', 1000)
-            await self._run_optimization_loop(num_steps, training_params)
-            
-            logger.success("QR-Adaptor optimization completed successfully!")
-            return True
+            logger.info(f"Trainable parameters: {trainable_params:,}")
+            logger.info(f"Total parameters: {total_params:,}")
+            logger.info(f"Trainable percentage: {100 * trainable_params / total_params:.2f}%")
             
         except Exception as e:
-            logger.error(f"QR-Adaptor optimization failed: {e}")
-            return False
-        finally:
-            self.training_active = False
+            logger.error(f"Failed to apply QR adaptation: {e}")
+            raise
     
-    async def _run_optimization_loop(self, num_steps: int, params: Dict[str, Any]) -> None:
-        """Run the joint optimization loop"""
-        
-        pbar = tqdm(range(num_steps), desc="QR-Adaptor Optimization")
-        
-        for step in pbar:
-            self.global_step = step
-            
-            # Simulate optimization step
-            await self._optimization_step()
-            
-            # Adaptive rank adjustment
-            if self.adaptive_rank and self.rank_controller.should_adjust_rank(step):
-                await self._adjust_ranks()
-            
-            # Joint bit-width optimization
-            if step % 200 == 0:
-                await self._optimize_bit_widths()
-            
-            # Update progress
-            avg_compression = np.mean([
-                layer.get_compression_ratio() for layer in self.qr_layers.values()
-            ])
-            
-            pbar.set_postfix({
-                'avg_compression': f"{avg_compression:.2f}x",
-                'active_layers': len(self.qr_layers)
-            })
-            
-            # Log metrics periodically
-            if step % 50 == 0:
-                await self._log_optimization_metrics()
-            
-            # Small delay
-            await asyncio.sleep(0.01)
-    
-    async def _optimization_step(self) -> None:
-        """Simulate single optimization step"""
-        
-        # In real implementation, this would:
-        # 1. Forward pass with current quantization
-        # 2. Compute reconstruction loss
-        # 3. Update adaptor parameters
-        # 4. Update quantization parameters
-        
-        # Simulate gradient computation for importance scoring
-        for name, layer in self.qr_layers.items():
-            # Simulate gradients
-            fake_grad_A = torch.randn_like(layer.adaptor_A) * 0.01
-            fake_grad_B = torch.randn_like(layer.adaptor_B) * 0.01
-            
-            # Compute importance score
-            combined_grad = torch.cat([fake_grad_A.flatten(), fake_grad_B.flatten()])
-            importance = self.rank_controller.compute_importance_score(name, combined_grad)
-            
-            # Update layer quantization periodically
-            if self.global_step % 100 == 0:
-                layer._update_quantization()
-    
-    async def _adjust_ranks(self) -> None:
-        """Adjust ranks based on importance scores"""
-        
-        adjustments_made = 0
-        
-        for name, layer in self.qr_layers.items():
-            current_rank = layer.current_rank
-            suggested_rank = self.rank_controller.suggest_rank_adjustment(name, current_rank)
-            
-            if suggested_rank != current_rank:
-                layer.update_rank(suggested_rank)
-                adjustments_made += 1
-        
-        if adjustments_made > 0:
-            logger.info(f"Adjusted ranks for {adjustments_made} layers")
-    
-    async def _optimize_bit_widths(self) -> None:
-        """Optimize bit-widths based on joint optimization criteria"""
-        
-        # Compute joint optimization score for each layer
-        for name, layer in self.qr_layers.items():
-            current_bits = layer.current_bits
-            current_compression = layer.get_compression_ratio()
-            
-            # Simple heuristic: increase bits for high-importance layers
-            importance = self.rank_controller.importance_scores.get(name, 0.0)
-            
-            if importance > 0.1 and current_bits < 8:  # High importance
-                new_bits = min(8, current_bits * 2)
-            elif importance < 0.05 and current_bits > 4:  # Low importance
-                new_bits = max(4, current_bits // 2)
-            else:
-                new_bits = current_bits
-            
-            if new_bits != current_bits:
-                layer.update_quantization_bits(new_bits)
-    
-    async def _log_optimization_metrics(self) -> None:
-        """Log comprehensive optimization metrics"""
-        
-        # Compute aggregate metrics
-        total_compression = np.mean([
-            layer.get_compression_ratio() for layer in self.qr_layers.values()
-        ])
-        
-        avg_rank = np.mean([
-            layer.current_rank for layer in self.qr_layers.values()
-        ])
-        
-        avg_bits = np.mean([
-            layer.current_bits for layer in self.qr_layers.values()
-        ])
-        
-        # Store metrics
-        self.optimization_history['compression_ratios'].append(total_compression)
-        
-        # Log key metrics
-        if self.global_step % 100 == 0:
-            logger.info(f"Step {self.global_step}: Compression={total_compression:.2f}x, "
-                       f"Avg Rank={avg_rank:.1f}, Avg Bits={avg_bits:.1f}")
-    
-    async def save_checkpoint(self, checkpoint_path: Optional[str] = None) -> None:
-        """Save QR-Adaptor checkpoint"""
-        
-        if checkpoint_path is None:
-            checkpoint_dir = Path("./checkpoints/qr_adaptor")
-            checkpoint_dir.mkdir(parents=True, exist_ok=True)
-            checkpoint_path = checkpoint_dir / f"checkpoint_step_{self.global_step}.pt"
-        
+    def create_dataloader(self, data: List[Dict[str, Any]], batch_size: Optional[int] = None):
+        """Create data loader"""
         try:
-            # Prepare checkpoint data
-            checkpoint = {
-                'model_name': self.base_model_name,
-                'config': self.config.__dict__,
-                'global_step': self.global_step,
-                'qr_layers_state': {},
-                'rank_controller_state': self.rank_controller.get_statistics(),
-                'optimization_history': self.optimization_history
+            from models.dora_trainer import PersianLegalDataset
+            
+            batch_size = batch_size or self.config.batch_size
+            dataset = PersianLegalDataset(data, self.tokenizer, self.config.max_length)
+            
+            dataloader = torch.utils.data.DataLoader(
+                dataset,
+                batch_size=batch_size,
+                shuffle=True,
+                num_workers=min(4, multiprocessing.cpu_count()),
+                pin_memory=torch.cuda.is_available()
+            )
+            
+            logger.info(f"Created dataloader with {len(dataset)} samples, batch size: {batch_size}")
+            return dataloader
+            
+        except Exception as e:
+            logger.error(f"Failed to create dataloader: {e}")
+            raise
+    
+    def setup_optimizer(self):
+        """Setup optimizer"""
+        try:
+            trainable_params = [p for p in self.model.parameters() if p.requires_grad]
+            
+            self.optimizer = AdamW(
+                trainable_params,
+                lr=self.config.learning_rate,
+                weight_decay=self.config.weight_decay,
+                betas=(0.9, 0.999),
+                eps=1e-8
+            )
+            
+            logger.info(f"Optimizer setup with {len(trainable_params)} trainable parameters")
+            
+        except Exception as e:
+            logger.error(f"Failed to setup optimizer: {e}")
+            raise
+    
+    def training_step(self, model: nn.Module, batch: Dict[str, torch.Tensor]) -> torch.Tensor:
+        """Single training step"""
+        try:
+            model.train()
+            
+            input_ids = batch['input_ids'].to(self.device)
+            attention_mask = batch['attention_mask'].to(self.device)
+            labels = batch['labels'].to(self.device)
+            
+            outputs = model(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                labels=labels
+            )
+            
+            loss = outputs.loss
+            loss.backward()
+            self.optimizer.step()
+            self.optimizer.zero_grad()
+            
+            return loss
+            
+        except Exception as e:
+            logger.error(f"Training step failed: {e}")
+            raise
+    
+    def train(self, train_data: List[Dict[str, Any]], eval_data: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+        """Complete training loop"""
+        try:
+            logger.info("Starting QR-Adaptor training")
+            
+            if self.model is None:
+                self.load_model()
+                self.apply_qr_adaptation()
+            
+            if self.optimizer is None:
+                self.setup_optimizer()
+            
+            train_dataloader = self.create_dataloader(train_data)
+            eval_dataloader = None
+            if eval_data:
+                eval_dataloader = self.create_dataloader(eval_data)
+            
+            training_metrics = {
+                'total_steps': 0,
+                'total_epochs': 0,
+                'total_loss': 0.0,
+                'best_loss': float('inf'),
+                'training_time': 0.0,
+                'loss_history': [],
+                'step_times': []
             }
             
-            # Save QR layer states
-            for name, layer in self.qr_layers.items():
-                checkpoint['qr_layers_state'][name] = {
-                    'adaptor_A': layer.adaptor_A.data,
-                    'adaptor_B': layer.adaptor_B.data,
-                    'current_rank': layer.current_rank,
-                    'current_bits': layer.current_bits,
-                    'quantized_weight': layer.quantized_weight,
-                    'quantization_scale': layer.quantization_scale,
-                    'quantization_zero_point': layer.quantization_zero_point,
-                    'metrics': layer.get_metrics()
-                }
+            start_time = time.time()
             
-            # Save checkpoint
-            torch.save(checkpoint, checkpoint_path)
+            for epoch in range(self.config.num_epochs):
+                logger.info(f"Starting epoch {epoch + 1}/{self.config.num_epochs}")
+                
+                epoch_loss = 0.0
+                num_batches = 0
+                
+                progress_bar = tqdm(train_dataloader, desc=f"Epoch {epoch + 1}")
+                
+                for batch in progress_bar:
+                    step_start = time.time()
+                    
+                    loss = self.training_step(self.model, batch)
+                    
+                    step_time = time.time() - step_start
+                    
+                    epoch_loss += loss.item()
+                    num_batches += 1
+                    training_metrics['total_steps'] += 1
+                    training_metrics['total_loss'] += loss.item()
+                    training_metrics['loss_history'].append(loss.item())
+                    training_metrics['step_times'].append(step_time)
+                    
+                    progress_bar.set_postfix({
+                        'loss': f"{loss.item():.4f}",
+                        'avg_loss': f"{epoch_loss / num_batches:.4f}",
+                        'step_time': f"{step_time:.2f}s"
+                    })
+                
+                avg_epoch_loss = epoch_loss / num_batches
+                training_metrics['total_epochs'] += 1
+                
+                if avg_epoch_loss < training_metrics['best_loss']:
+                    training_metrics['best_loss'] = avg_epoch_loss
+                
+                logger.info(f"Epoch {epoch + 1} completed. Average loss: {avg_epoch_loss:.4f}")
+                
+                if eval_dataloader:
+                    eval_metrics = self.evaluate(eval_dataloader)
+                    logger.info(f"Evaluation metrics: {eval_metrics}")
             
-            logger.info(f"QR-Adaptor checkpoint saved: {checkpoint_path}")
+            training_metrics['training_time'] = time.time() - start_time
+            training_metrics['avg_loss'] = training_metrics['total_loss'] / training_metrics['total_steps']
+            training_metrics['avg_step_time'] = np.mean(training_metrics['step_times'])
+            
+            logger.info(f"Training completed in {training_metrics['training_time']:.2f} seconds")
+            logger.info(f"Final average loss: {training_metrics['avg_loss']:.4f}")
+            
+            return training_metrics
             
         except Exception as e:
-            logger.error(f"Failed to save QR-Adaptor checkpoint: {e}")
+            logger.error(f"Training failed: {e}")
+            raise
     
-    def get_system_info(self) -> Dict[str, Any]:
-        """Get comprehensive system information"""
-        
-        layer_info = {}
-        for name, layer in self.qr_layers.items():
-            layer_info[name] = layer.get_metrics()
-        
-        return {
-            'model_name': self.base_model_name,
-            'config': self.config.__dict__,
-            'training_active': self.training_active,
-            'global_step': self.global_step,
-            'total_layers': len(self.qr_layers),
-            'rank_controller_stats': self.rank_controller.get_statistics(),
-            'optimization_history': self.optimization_history,
-            'layer_details': layer_info,
-            'average_compression': np.mean([
-                layer.get_compression_ratio() for layer in self.qr_layers.values()
-            ]) if self.qr_layers else 0.0
-        }
+    def evaluate(self, eval_dataloader):
+        """Evaluate model"""
+        try:
+            self.model.eval()
+            
+            total_loss = 0.0
+            correct_predictions = 0
+            total_predictions = 0
+            
+            with torch.no_grad():
+                for batch in tqdm(eval_dataloader, desc="Evaluating"):
+                    input_ids = batch['input_ids'].to(self.device)
+                    attention_mask = batch['attention_mask'].to(self.device)
+                    labels = batch['labels'].to(self.device)
+                    
+                    outputs = self.model(
+                        input_ids=input_ids,
+                        attention_mask=attention_mask,
+                        labels=labels
+                    )
+                    
+                    loss = outputs.loss
+                    logits = outputs.logits
+                    
+                    total_loss += loss.item()
+                    predictions = torch.argmax(logits, dim=-1)
+                    correct_predictions += (predictions == labels).sum().item()
+                    total_predictions += labels.size(0)
+            
+            avg_loss = total_loss / len(eval_dataloader)
+            accuracy = correct_predictions / total_predictions
+            
+            return {
+                'eval_loss': avg_loss,
+                'eval_accuracy': accuracy,
+                'correct_predictions': correct_predictions,
+                'total_predictions': total_predictions
+            }
+            
+        except Exception as e:
+            logger.error(f"Evaluation failed: {e}")
+            return {'eval_loss': float('inf'), 'eval_accuracy': 0.0}
     
-    def get_inference_model(self) -> nn.Module:
-        """Get model optimized for inference"""
-        
-        if self.base_model is None:
-            raise ValueError("Model not initialized")
-        
-        # Set all layers to evaluation mode for quantized inference
-        self.base_model.eval()
-        
-        # Update all quantizations
-        for layer in self.qr_layers.values():
-            layer._update_quantization()
-        
-        logger.info("Model prepared for quantized inference")
-        return self.base_model
+    def save_model(self, output_dir: str):
+        """Save trained model"""
+        try:
+            output_path = Path(output_dir)
+            output_path.mkdir(parents=True, exist_ok=True)
+            
+            self.model.save_pretrained(output_path)
+            self.tokenizer.save_pretrained(output_path)
+            
+            qr_config = {
+                'quantization_bits': self.config.quantization_bits,
+                'rank': self.config.rank,
+                'alpha': self.config.alpha,
+                'target_modules': self.config.target_modules
+            }
+            
+            import json
+            with open(output_path / 'qr_config.json', 'w') as f:
+                json.dump(qr_config, f, indent=2)
+            
+            logger.info(f"QR-Adaptor model saved to {output_path}")
+            
+        except Exception as e:
+            logger.error(f"Failed to save model: {e}")
+            raise

@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 """
-Persian Legal AI Backend Server - Real Data Implementation
-سرور Backend برای سیستم هوش مصنوعی حقوقی فارسی با داده‌های واقعی
+Persian Legal AI Backend Server - Real Implementation
+سرور Backend واقعی برای سیستم هوش مصنوعی حقوقی فارسی
 """
 
 import asyncio
-import json
 import logging
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Dict, List, Optional, Any
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
@@ -18,14 +17,15 @@ from pydantic import BaseModel
 import psutil
 import os
 
-# Import real data components
-from routes.team import router as team_router
-from routes.models import router as models_router
-from routes.monitoring import router as monitoring_router
-from config.database import init_database, get_db
-from models import *
+# Import real API endpoints
+from api.system_endpoints import router as system_router
+from api.training_endpoints import router as training_router
 
-# تنظیم لاگینگ
+# Import database and optimization
+from database.connection import init_database, db_manager
+from optimization.system_optimizer import system_optimizer
+
+# Setup logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
@@ -36,16 +36,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# کلاس اصلی سرور
 class PersianAIBackend:
+    """Real Persian AI Backend Server"""
+    
     def __init__(self):
         self.app = FastAPI(
-            title="Persian Legal AI Backend - Real Data",
-            description="سرور Backend برای سیستم هوش مصنوعی حقوقی فارسی با داده‌های واقعی",
+            title="Persian Legal AI Backend - Real Implementation",
+            description="سرور Backend واقعی برای سیستم هوش مصنوعی حقوقی فارسی",
             version="2.0.0"
         )
         
-        # تنظیم CORS
+        # Setup CORS
         self.app.add_middleware(
             CORSMiddleware,
             allow_origins=["*"],
@@ -54,149 +55,214 @@ class PersianAIBackend:
             allow_headers=["*"],
         )
         
-        # Include real data API routers
-        self.app.include_router(team_router)
-        self.app.include_router(models_router)
-        self.app.include_router(monitoring_router)
+        # Include routers
+        self.app.include_router(system_router)
+        self.app.include_router(training_router)
         
-        # متغیرهای سیستم
-        self.connected_clients: List[WebSocket] = []
-        self.system_active = True
-        
-        # Initialize database
-        self.setup_database()
+        # WebSocket connections
+        self.active_connections: List[WebSocket] = []
         
         # Setup routes
-        self.setup_routes()
+        self._setup_routes()
         
-        # Setup WebSocket
-        self.setup_websocket()
+        logger.info("Persian AI Backend initialized")
     
-    def setup_database(self):
-        """Initialize database tables"""
-        try:
-            init_database()
-            logger.info("Database initialized successfully")
-        except Exception as e:
-            logger.error(f"Failed to initialize database: {e}")
-    
-    def setup_routes(self):
-        """Setup API routes"""
+    def _setup_routes(self):
+        """Setup additional routes"""
         
         @self.app.get("/")
         async def root():
             return {
-                "message": "Persian Legal AI Backend - Real Data System",
-                "version": "2.0.0",
-                "status": "active",
-                "timestamp": datetime.utcnow()
+                "message": "Persian Legal AI Backend - Real Implementation",
+                "status": "running",
+                "timestamp": datetime.utcnow().isoformat(),
+                "version": "2.0.0"
             }
         
-        @self.app.get("/api/real/health")
+        @self.app.get("/health")
         async def health_check():
-            """System health check"""
+            """Health check endpoint"""
             try:
-                cpu_usage = psutil.cpu_percent(interval=1)
+                # Check database connection
+                db_healthy = db_manager.test_connection()
+                
+                # Check system resources
+                cpu_percent = psutil.cpu_percent(interval=1)
                 memory = psutil.virtual_memory()
-                disk = psutil.disk_usage('/')
                 
                 return {
-                    "status": "healthy",
-                    "timestamp": datetime.utcnow(),
+                    "status": "healthy" if db_healthy else "degraded",
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "database": "connected" if db_healthy else "disconnected",
                     "system": {
-                        "cpu_usage": cpu_usage,
-                        "memory_usage": memory.percent,
-                        "disk_usage": (disk.used / disk.total) * 100
+                        "cpu_percent": cpu_percent,
+                        "memory_percent": memory.percent,
+                        "memory_available_gb": memory.available / (1024**3)
+                    },
+                    "optimization": {
+                        "active": system_optimizer.monitoring_active,
+                        "optimal_batch_size": system_optimizer.get_optimal_batch_size(),
+                        "optimal_workers": system_optimizer.get_optimal_num_workers()
                     }
                 }
             except Exception as e:
-                return {
-                    "status": "error",
-                    "error": str(e),
-                    "timestamp": datetime.utcnow()
-                }
-        
-        @self.app.get("/api/real/stats")
-        async def get_system_stats(db = Depends(get_db)):
-            """Get system statistics from real database"""
-            try:
-                # Get real statistics from database
-                from sqlalchemy import func
-                
-                team_count = db.query(TeamMember).filter(TeamMember.is_active == True).count()
-                model_count = db.query(ModelTraining).count()
-                active_models = db.query(ModelTraining).filter(ModelTraining.status == 'training').count()
-                
-                return {
-                    "team_members": team_count,
-                    "total_models": model_count,
-                    "active_models": active_models,
-                    "timestamp": datetime.utcnow()
-                }
-            except Exception as e:
-                raise HTTPException(status_code=500, detail=f"Failed to get stats: {str(e)}")
-    
-    def setup_websocket(self):
-        """Setup WebSocket for real-time updates"""
+                logger.error(f"Health check failed: {e}")
+                raise HTTPException(status_code=500, detail=str(e))
         
         @self.app.websocket("/ws")
         async def websocket_endpoint(websocket: WebSocket):
+            """WebSocket endpoint for real-time updates"""
             await websocket.accept()
-            self.connected_clients.append(websocket)
-            logger.info(f"Client connected. Total clients: {len(self.connected_clients)}")
+            self.active_connections.append(websocket)
             
             try:
                 while True:
-                    # Send real-time system metrics
-                    try:
-                        cpu_usage = psutil.cpu_percent(interval=1)
-                        memory = psutil.virtual_memory()
-                        
-                        metrics = {
-                            "type": "system_metrics",
-                            "data": {
-                                "cpu_usage": cpu_usage,
-                                "memory_usage": memory.percent,
-                                "timestamp": datetime.utcnow().isoformat()
-                            }
-                        }
-                        
-                        await websocket.send_text(json.dumps(metrics))
-                        await asyncio.sleep(5)  # Send updates every 5 seconds
-                        
-                    except WebSocketDisconnect:
-                        break
-                    except Exception as e:
-                        logger.error(f"WebSocket error: {e}")
-                        break
-                        
+                    # Send periodic system updates
+                    await asyncio.sleep(5)
+                    
+                    # Get current system metrics
+                    system_metrics = await self._get_system_metrics()
+                    
+                    # Send to all connected clients
+                    await self._broadcast_to_connections(system_metrics)
+                    
             except WebSocketDisconnect:
-                pass
-            finally:
-                if websocket in self.connected_clients:
-                    self.connected_clients.remove(websocket)
-                logger.info(f"Client disconnected. Total clients: {len(self.connected_clients)}")
+                self.active_connections.remove(websocket)
+                logger.info("WebSocket client disconnected")
+            except Exception as e:
+                logger.error(f"WebSocket error: {e}")
+                if websocket in self.active_connections:
+                    self.active_connections.remove(websocket)
     
-    async def broadcast_update(self, message: dict):
-        """Broadcast message to all connected clients"""
-        if self.connected_clients:
-            disconnected = []
-            for client in self.connected_clients:
-                try:
-                    await client.send_text(json.dumps(message))
-                except:
-                    disconnected.append(client)
+    async def _get_system_metrics(self) -> Dict[str, Any]:
+        """Get current system metrics"""
+        try:
+            # Get system metrics
+            cpu_percent = psutil.cpu_percent(interval=1)
+            memory = psutil.virtual_memory()
+            disk = psutil.disk_usage('/')
             
-            # Remove disconnected clients
-            for client in disconnected:
-                self.connected_clients.remove(client)
+            # Get optimization report
+            optimization_report = system_optimizer.get_optimization_report()
+            
+            return {
+                "type": "system_metrics",
+                "timestamp": datetime.utcnow().isoformat(),
+                "metrics": {
+                    "cpu_percent": cpu_percent,
+                    "memory_percent": memory.percent,
+                    "memory_available_gb": memory.available / (1024**3),
+                    "disk_percent": (disk.used / disk.total) * 100,
+                    "disk_free_gb": disk.free / (1024**3)
+                },
+                "optimization": optimization_report
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to get system metrics: {e}")
+            return {
+                "type": "error",
+                "timestamp": datetime.utcnow().isoformat(),
+                "error": str(e)
+            }
     
-    def run(self, host: str = "0.0.0.0", port: int = 8000):
-        """Run the server"""
-        logger.info(f"Starting Persian Legal AI Backend on {host}:{port}")
-        uvicorn.run(self.app, host=host, port=port, log_level="info")
+    async def _broadcast_to_connections(self, message: Dict[str, Any]):
+        """Broadcast message to all WebSocket connections"""
+        if not self.active_connections:
+            return
+        
+        disconnected = []
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(message)
+            except Exception as e:
+                logger.warning(f"Failed to send message to WebSocket: {e}")
+                disconnected.append(connection)
+        
+        # Remove disconnected connections
+        for connection in disconnected:
+            if connection in self.active_connections:
+                self.active_connections.remove(connection)
+    
+    async def startup(self):
+        """Startup tasks"""
+        try:
+            logger.info("Starting Persian AI Backend...")
+            
+            # Initialize database
+            if init_database():
+                logger.info("Database initialized successfully")
+            else:
+                logger.error("Database initialization failed")
+            
+            # Start system optimization monitoring
+            system_optimizer.monitor_system(interval=10.0)
+            logger.info("System optimization monitoring started")
+            
+            logger.info("Persian AI Backend startup completed")
+            
+        except Exception as e:
+            logger.error(f"Startup failed: {e}")
+            raise
+    
+    async def shutdown(self):
+        """Shutdown tasks"""
+        try:
+            logger.info("Shutting down Persian AI Backend...")
+            
+            # Stop system optimization monitoring
+            system_optimizer.stop_monitoring()
+            
+            # Close database connections
+            db_manager.close()
+            
+            # Close WebSocket connections
+            for connection in self.active_connections:
+                try:
+                    await connection.close()
+                except Exception as e:
+                    logger.warning(f"Failed to close WebSocket: {e}")
+            
+            logger.info("Persian AI Backend shutdown completed")
+            
+        except Exception as e:
+            logger.error(f"Shutdown failed: {e}")
 
-# Create and run the server
+# Create backend instance
+backend = PersianAIBackend()
+
+# Add startup and shutdown events
+@backend.app.on_event("startup")
+async def startup_event():
+    await backend.startup()
+
+@backend.app.on_event("shutdown")
+async def shutdown_event():
+    await backend.shutdown()
+
+# Get FastAPI app
+app = backend.app
+
+def main():
+    """Main function to run the server"""
+    try:
+        logger.info("Starting Persian Legal AI Backend Server...")
+        
+        # Run server
+        uvicorn.run(
+            "main:app",
+            host="0.0.0.0",
+            port=8000,
+            reload=False,
+            log_level="info",
+            access_log=True
+        )
+        
+    except KeyboardInterrupt:
+        logger.info("Server stopped by user")
+    except Exception as e:
+        logger.error(f"Server failed to start: {e}")
+        raise
+
 if __name__ == "__main__":
-    server = PersianAIBackend()
-    server.run()
+    main()
