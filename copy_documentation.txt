@@ -1,0 +1,187 @@
+@echo off
+chcp 65001 >nul
+echo 📚 کپی مستندات به پروژه Persian Legal AI
+echo ==========================================
+
+:: بررسی وجود پوشه پروژه
+if not exist "persian-legal-ai" (
+    echo ❌ پوشه persian-legal-ai یافت نشد
+    echo ابتدا اسکریپت organize_files.ps1 را اجرا کنید
+    pause
+    exit /b 1
+)
+
+echo 📄 کپی فایل‌های مستندات...
+
+:: کپی README انگلیسی
+echo # Persian Legal AI Training System> "persian-legal-ai\README.md"
+echo.>> "persian-legal-ai\README.md"
+echo [مستندات کامل در حال آماده‌سازی]>> "persian-legal-ai\README.md"
+echo.>> "persian-legal-ai\README.md"
+echo For complete documentation, please refer to:>> "persian-legal-ai\README.md"
+echo - English: README.md>> "persian-legal-ai\README.md"
+echo - Persian: README-FA.md>> "persian-legal-ai\README.md"
+echo.>> "persian-legal-ai\README.md"
+echo ## Quick Start>> "persian-legal-ai\README.md"
+echo.>> "persian-legal-ai\README.md"
+echo 1. Backend:>> "persian-legal-ai\README.md"
+echo ```bash>> "persian-legal-ai\README.md"
+echo cd backend>> "persian-legal-ai\README.md"
+echo python -m venv venv>> "persian-legal-ai\README.md"
+echo venv\Scripts\activate>> "persian-legal-ai\README.md"
+echo pip install -r requirements.txt>> "persian-legal-ai\README.md"
+echo python main.py>> "persian-legal-ai\README.md"
+echo ```>> "persian-legal-ai\README.md"
+echo.>> "persian-legal-ai\README.md"
+echo 2. Frontend:>> "persian-legal-ai\README.md"
+echo ```bash>> "persian-legal-ai\README.md"
+echo cd frontend>> "persian-legal-ai\README.md"
+echo npm install>> "persian-legal-ai\README.md"
+echo npm start>> "persian-legal-ai\README.md"
+echo ```>> "persian-legal-ai\README.md"
+
+echo ✅ README.md ایجاد شد
+
+:: کپی README فارسی
+echo # سیستم آموزش هوش مصنوعی حقوقی فارسی> "persian-legal-ai\README-FA.md"
+echo.>> "persian-legal-ai\README-FA.md"
+echo [مستندات کامل فارسی]>> "persian-legal-ai\README-FA.md"
+echo.>> "persian-legal-ai\README-FA.md"
+echo ## شروع سریع>> "persian-legal-ai\README-FA.md"
+echo.>> "persian-legal-ai\README-FA.md"
+echo ### Backend:>> "persian-legal-ai\README-FA.md"
+echo ```bash>> "persian-legal-ai\README-FA.md"
+echo cd backend>> "persian-legal-ai\README-FA.md"
+echo python -m venv venv>> "persian-legal-ai\README-FA.md"
+echo venv\Scripts\activate>> "persian-legal-ai\README-FA.md"
+echo pip install -r requirements.txt>> "persian-legal-ai\README-FA.md"
+echo python main.py>> "persian-legal-ai\README-FA.md"
+echo ```>> "persian-legal-ai\README-FA.md"
+echo.>> "persian-legal-ai\README-FA.md"
+echo ### Frontend:>> "persian-legal-ai\README-FA.md"
+echo ```bash>> "persian-legal-ai\README-FA.md"
+echo cd frontend>> "persian-legal-ai\README-FA.md"
+echo npm install>> "persian-legal-ai\README-FA.md"
+echo npm start>> "persian-legal-ai\README-FA.md"
+echo ```>> "persian-legal-ai\README-FA.md"
+
+echo ✅ README-FA.md ایجاد شد
+
+:: ایجاد فایل ساختار پروژه
+echo 📁 ایجاد فایل ساختار پروژه...
+
+(
+echo Persian Legal AI Project Structure
+echo ====================================
+echo.
+echo persian-legal-ai/
+echo ├── backend/
+echo │   ├── main.py                ^(FastAPI server^)
+echo │   ├── requirements.txt       ^(Python dependencies^)
+echo │   ├── api/                   ^(API endpoints^)
+echo │   ├── models/                ^(AI models^)
+echo │   ├── services/              ^(Business logic^)
+echo │   ├── utils/                 ^(Utilities^)
+echo │   ├── config/                ^(Configuration^)
+echo │   └── logs/                  ^(Application logs^)
+echo ├── frontend/
+echo │   ├── src/
+echo │   │   ├── components/        ^(React components^)
+echo │   │   │   ├── CompletePersianAIDashboard.tsx
+echo │   │   │   └── AdvancedComponents.jsx
+echo │   │   ├── hooks/             ^(Custom hooks^)
+echo │   │   │   └── usePersianAI.js
+echo │   │   ├── api/               ^(API integration^)
+echo │   │   │   └── persian-ai-api.js
+echo │   │   └── styles/            ^(CSS styles^)
+echo │   ├── package.json           ^(Dependencies^)
+echo │   └── public/                ^(Static files^)
+echo ├── scripts/
+echo │   ├── setup.sh              ^(Setup script^)
+echo │   └── launcher.py           ^(Launcher^)
+echo └── docs/
+echo     ├── README.txt             ^(Documentation^)
+echo     └── GUIDE.txt              ^(User guide^)
+echo.
+echo Key Features:
+echo - DoRA ^(Weight-Decomposed Low-Rank Adaptation^)
+echo - QR-Adaptor ^(Joint Quantization and Rank Optimization^)
+echo - Intel CPU Optimization
+echo - Persian Legal Data Integration
+echo - Real-time Dashboard
+echo - Production-Ready
+) > "persian-legal-ai\PROJECT_STRUCTURE.txt"
+
+echo ✅ PROJECT_STRUCTURE.txt ایجاد شد
+
+:: ایجاد فایل راهنمای سریع
+(
+echo Quick Start Guide - Persian Legal AI
+echo =====================================
+echo.
+echo 1. Prerequisites:
+echo    - Python 3.9+
+echo    - Node.js 16+
+echo    - Windows 10/11 or Windows Server
+echo    - 32-64GB RAM
+echo    - Intel CPU ^(recommended^)
+echo.
+echo 2. Installation:
+echo    a^) Organize files: .\organize_files.ps1
+echo    b^) Setup Backend:
+echo       cd persian-legal-ai\backend
+echo       python -m venv venv
+echo       venv\Scripts\activate
+echo       pip install -r requirements.txt
+echo.
+echo    c^) Setup Frontend:
+echo       cd ..\frontend
+echo       npm install
+echo.
+echo 3. Running:
+echo    a^) Start Backend:
+echo       cd backend
+echo       venv\Scripts\activate
+echo       python main.py
+echo       ^(Available at: http://localhost:8000^)
+echo.
+echo    b^) Start Frontend:
+echo       cd frontend
+echo       npm start
+echo       ^(Available at: http://localhost:3000^)
+echo.
+echo 4. Key URLs:
+echo    - Dashboard: http://localhost:3000
+echo    - API: http://localhost:8000
+echo    - API Docs: http://localhost:8000/docs
+echo    - WebSocket: ws://localhost:8000/ws
+echo.
+echo 5. Main Components:
+echo    - CompletePersianAIDashboard.tsx: Main dashboard
+echo    - main.py: FastAPI backend server
+echo    - usePersianAI.js: React hooks
+echo    - persian-ai-api.js: API client
+echo.
+echo For detailed documentation, see README.md and README-FA.md
+) > "persian-legal-ai\QUICK_START.txt"
+
+echo ✅ QUICK_START.txt ایجاد شد
+
+:: نمایش خلاصه
+echo.
+echo 🎉 تمام فایل‌های مستندات ایجاد شدند:
+echo.
+echo 📁 persian-legal-ai\
+echo   ├── README.md              ^(راهنمای انگلیسی^)
+echo   ├── README-FA.md           ^(راهنمای فارسی^)
+echo   ├── PROJECT_STRUCTURE.txt  ^(ساختار پروژه^)
+echo   └── QUICK_START.txt        ^(راهنمای سریع^)
+echo.
+echo 💡 برای شروع کار:
+echo   1. cd persian-legal-ai
+echo   2. مطالعه README.md یا README-FA.md
+echo   3. اجرای دستورات QUICK_START.txt
+echo.
+echo 🚀 پروژه آماده استفاده است!
+echo.
+pause
