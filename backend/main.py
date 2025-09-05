@@ -19,6 +19,13 @@ from pydantic import BaseModel
 import psutil
 import os
 
+# Import new training system components
+from api.training_endpoints import router as training_router
+from api.model_endpoints import router as model_router
+from api.system_endpoints import router as system_router
+from services.training_service import training_service
+from database.connection import db_manager
+
 # تنظیم لاگینگ
 logging.basicConfig(
     level=logging.INFO,
@@ -98,6 +105,11 @@ class PersianAIBackend:
             allow_methods=["*"],
             allow_headers=["*"],
         )
+        
+        # Include new API routers
+        self.app.include_router(training_router)
+        self.app.include_router(model_router)
+        self.app.include_router(system_router)
         
         # متغیرهای سیستم
         self.connected_clients: List[WebSocket] = []
