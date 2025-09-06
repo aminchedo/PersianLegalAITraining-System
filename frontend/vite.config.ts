@@ -4,7 +4,7 @@ import path from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: "/<REPO-NAME>/",
+  base: "/persian-legal-ai/",
   plugins: [react()],
   resolve: {
     alias: {
@@ -23,6 +23,7 @@ export default defineConfig({
         target: 'http://localhost:8000',
         changeOrigin: true,
         secure: false,
+        rewrite: (path) => path.replace(/^\/api/, '/api'),
       },
     },
   },

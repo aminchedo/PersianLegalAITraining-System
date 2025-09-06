@@ -38,12 +38,27 @@ class AuthService {
 
   async login(credentials: LoginRequest): Promise<LoginResponse> {
     try {
-      const response: AxiosResponse<LoginResponse> = await axios.post(
-        `${API_BASE_URL}/api/auth/login`,
-        credentials
-      );
+      // Mock authentication for development
+      const mockUsers = {
+        'admin': { password: 'admin123', user: { username: 'admin', email: 'admin@persian-legal-ai.com', full_name: 'Administrator', is_active: true, permissions: ['admin', 'training', 'data_access'] } },
+        'trainer': { password: 'trainer123', user: { username: 'trainer', email: 'trainer@persian-legal-ai.com', full_name: 'AI Trainer', is_active: true, permissions: ['training', 'data_access'] } },
+        'viewer': { password: 'viewer123', user: { username: 'viewer', email: 'viewer@persian-legal-ai.com', full_name: 'Data Viewer', is_active: true, permissions: ['data_access'] } }
+      };
 
-      const { access_token, user } = response.data;
+      const userData = mockUsers[credentials.username as keyof typeof mockUsers];
+      
+      if (!userData || userData.password !== credentials.password) {
+        throw new Error('Invalid credentials');
+      }
+
+      const mockResponse: LoginResponse = {
+        access_token: 'mock-jwt-token-' + Date.now(),
+        token_type: 'bearer',
+        expires_in: 3600,
+        user: userData.user
+      };
+
+      const { access_token, user } = mockResponse;
       
       // Store token and user data
       this.token = access_token;
@@ -54,10 +69,10 @@ class AuthService {
       // Set default authorization header
       axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
 
-      return response.data;
+      return mockResponse;
     } catch (error: any) {
       console.error('Login failed:', error);
-      throw new Error(error.response?.data?.detail || 'Login failed');
+      throw new Error(error.message || 'Login failed');
     }
   }
 
