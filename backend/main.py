@@ -22,6 +22,7 @@ import os
 from api.system_endpoints import router as system_router
 from api.training_endpoints import router as training_router
 from api.enhanced_health import router as health_router
+from api.real_data_endpoints import router as real_data_router
 from auth.routes import router as auth_router
 
 # Import database and optimization
@@ -70,6 +71,7 @@ class PersianAIBackend:
         self.app.include_router(health_router)
         self.app.include_router(system_router)
         self.app.include_router(training_router)
+        self.app.include_router(real_data_router)
         
         # WebSocket connections
         self.active_connections: List[WebSocket] = []
