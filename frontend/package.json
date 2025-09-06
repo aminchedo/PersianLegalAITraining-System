@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "description": "Frontend for Persian Legal AI Training System - React + TypeScript + Vite",
-  "homepage": "https://<USERNAME>.github.io/<REPO-NAME>",
+  "homepage": "https://<USERNAME>.github.io/persian-legal-ai",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

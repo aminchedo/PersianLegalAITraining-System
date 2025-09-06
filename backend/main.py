@@ -19,15 +19,25 @@ import psutil
 import os
 
 # Import real API endpoints
-from api.system_endpoints import router as system_router
-from api.training_endpoints import router as training_router
-from api.enhanced_health import router as health_router
-from api.real_data_endpoints import router as real_data_router
-from auth.routes import router as auth_router
+try:
+    from api.system_endpoints import router as system_router
+    from api.training_endpoints import router as training_router
+    from api.enhanced_health import router as health_router
+    from api.real_data_endpoints import router as real_data_router
+    from auth.routes import router as auth_router
+    API_ENDPOINTS_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: Some API endpoints not available: {e}")
+    API_ENDPOINTS_AVAILABLE = False
 
 # Import database and optimization
 from database.connection import init_database, db_manager
-from optimization.system_optimizer import system_optimizer
+try:
+    from optimization.system_optimizer import system_optimizer
+    OPTIMIZATION_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: System optimization not available: {e}")
+    OPTIMIZATION_AVAILABLE = False
 
 # Import security middleware
 from middleware.rate_limiter import rate_limit_middleware
@@ -66,12 +76,13 @@ class PersianAIBackend:
         # Add rate limiting middleware
         self.app.middleware("http")(rate_limit_middleware)
         
-        # Include routers
-        self.app.include_router(auth_router)
-        self.app.include_router(health_router)
-        self.app.include_router(system_router)
-        self.app.include_router(training_router)
-        self.app.include_router(real_data_router)
+        # Include routers (conditionally)
+        if API_ENDPOINTS_AVAILABLE:
+            self.app.include_router(auth_router)
+            self.app.include_router(health_router)
+            self.app.include_router(system_router)
+            self.app.include_router(training_router)
+            self.app.include_router(real_data_router)
         
         # WebSocket connections
         self.active_connections: List[WebSocket] = []
@@ -114,9 +125,9 @@ class PersianAIBackend:
                         "memory_available_gb": memory.available / (1024**3)
                     },
                     "optimization": {
-                        "active": system_optimizer.monitoring_active,
-                        "optimal_batch_size": system_optimizer.get_optimal_batch_size(),
-                        "optimal_workers": system_optimizer.get_optimal_num_workers()
+                        "active": system_optimizer.monitoring_active if OPTIMIZATION_AVAILABLE else False,
+                        "optimal_batch_size": system_optimizer.get_optimal_batch_size() if OPTIMIZATION_AVAILABLE else 32,
+                        "optimal_workers": system_optimizer.get_optimal_num_workers() if OPTIMIZATION_AVAILABLE else 4
                     }
                 }
             except Exception as e:
@@ -157,7 +168,7 @@ class PersianAIBackend:
             disk = psutil.disk_usage('/')
             
             # Get optimization report
-            optimization_report = system_optimizer.get_optimization_report()
+            optimization_report = system_optimizer.get_optimization_report() if OPTIMIZATION_AVAILABLE else {}
             
             return {
                 "type": "system_metrics",
@@ -210,8 +221,11 @@ class PersianAIBackend:
                 logger.error("Database initialization failed")
             
             # Start system optimization monitoring
-            system_optimizer.monitor_system(interval=10.0)
-            logger.info("System optimization monitoring started")
+            if OPTIMIZATION_AVAILABLE:
+                system_optimizer.monitor_system(interval=10.0)
+                logger.info("System optimization monitoring started")
+            else:
+                logger.info("System optimization not available")
             
             logger.info("Persian AI Backend startup completed")
             
@@ -225,7 +239,8 @@ class PersianAIBackend:
             logger.info("Shutting down Persian AI Backend...")
             
             # Stop system optimization monitoring
-            system_optimizer.stop_monitoring()
+            if OPTIMIZATION_AVAILABLE:
+                system_optimizer.stop_monitoring()
             
             # Close database connections
             db_manager.close()
