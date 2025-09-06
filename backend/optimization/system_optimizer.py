@@ -464,3 +464,66 @@ class SystemOptimizer:
             
         except Exception as e:
             logger.error(f"Failed to cleanup system optimizer: {e}")
+    
+    def monitor_system(self, interval: float = 10.0):
+        """Start system monitoring"""
+        try:
+            self.config.monitoring_interval = interval
+            self.start_performance_monitoring()
+            logger.info(f"System monitoring started with {interval}s interval")
+        except Exception as e:
+            logger.error(f"Failed to start system monitoring: {e}")
+    
+    def stop_monitoring(self):
+        """Stop system monitoring"""
+        try:
+            self.stop_performance_monitoring()
+            logger.info("System monitoring stopped")
+        except Exception as e:
+            logger.error(f"Failed to stop system monitoring: {e}")
+    
+    def get_optimal_batch_size(self) -> int:
+        """Get optimal batch size based on system resources"""
+        try:
+            memory = psutil.virtual_memory()
+            available_gb = memory.available / (1024**3)
+            
+            # Simple heuristic: more memory = larger batch size
+            if available_gb > 16:
+                return 16
+            elif available_gb > 8:
+                return 8
+            elif available_gb > 4:
+                return 4
+            else:
+                return 2
+        except Exception as e:
+            logger.error(f"Failed to get optimal batch size: {e}")
+            return 4
+    
+    def get_optimal_num_workers(self) -> int:
+        """Get optimal number of workers based on CPU cores"""
+        try:
+            cpu_count = psutil.cpu_count(logical=False)
+            return min(cpu_count, 8)  # Cap at 8 workers
+        except Exception as e:
+            logger.error(f"Failed to get optimal number of workers: {e}")
+            return 4
+    
+    def get_optimization_report(self) -> Dict[str, Any]:
+        """Get optimization report"""
+        try:
+            return {
+                "monitoring_active": self.monitoring_active,
+                "optimal_batch_size": self.get_optimal_batch_size(),
+                "optimal_workers": self.get_optimal_num_workers(),
+                "performance_history_length": len(self.performance_history),
+                "config": {
+                    "memory_limit_gb": self.config.memory_limit_gb,
+                    "cpu_cores": self.config.cpu_cores,
+                    "monitoring_interval": self.config.monitoring_interval
+                }
+            }
+        except Exception as e:
+            logger.error(f"Failed to get optimization report: {e}")
+            return {"error": str(e)}

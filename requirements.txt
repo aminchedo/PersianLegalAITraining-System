@@ -62,11 +62,13 @@ black>=23.0.0
 flake8>=6.0.0
 mypy>=1.4.0
 
-# Frontend Dependencies (for TypeScript React)
-# Note: These are typically installed via npm/yarn
-# @types/react
-# @types/react-dom
-# typescript
-# vite
-# react
-# react-dom
+# Authentication & Security
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+python-multipart>=0.0.6
+
+# WebSocket support
+websockets>=11.0.0
+
+# Additional utilities
+python-dotenv>=1.0.0
