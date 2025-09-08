@@ -1,0 +1,35 @@
+Backend structure:
+backend/monitoring/performance_monitor.py
+backend/monitoring/__init__.py
+backend/models/dora_trainer.py
+backend/models/qr_adaptor.py
+backend/models/verified_data_trainer.py
+backend/models/__init__.py
+backend/models/model_manager.py
+backend/auth/routes.py
+backend/auth/jwt_handler.py
+backend/auth/dependencies.py
+backend/auth/__init__.py
+backend/scraper.py
+backend/api/system_endpoints.py
+backend/api/training_endpoints.py
+backend/api/model_endpoints.py
+backend/api/real_data_endpoints.py
+backend/api/__init__.py
+backend/api/enhanced_health.py
+backend/optimization/system_optimizer.py
+backend/optimization/memory_optimizer.py
+
+Existing API files:
+backend/api/system_endpoints.py
+backend/api/training_endpoints.py
+backend/api/model_endpoints.py
+backend/api/real_data_endpoints.py
+backend/api/__init__.py
+backend/api/enhanced_health.py
+
+Existing service files:
+backend/services/training_service.py
+backend/services/persian_data_processor.py
+backend/services/rapid_trainer.py
+backend/services/__init__.py
