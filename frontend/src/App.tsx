@@ -9,6 +9,9 @@ import CompletePersianAIDashboard from './components/CompletePersianAIDashboard'
 // Import services
 import authService from './services/authService';
 
+// Import Query Provider
+import { QueryProvider } from './providers/QueryProvider';
+
 
 // Protected Route component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -60,36 +63,38 @@ const App: React.FC = () => {
   }
 
   return (
-    <Router>
-      <Routes>
-        <Route 
-          path="/login" 
-          element={
-            isAuthenticated ? (
-              <Navigate to="/dashboard" replace />
-            ) : (
-              <LoginForm onLoginSuccess={handleLoginSuccess} />
-            )
-          } 
-        />
-        <Route 
-          path="/dashboard" 
-          element={
-            <ProtectedRoute>
-              <CompletePersianAIDashboard />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/" 
-          element={<Navigate to="/dashboard" replace />} 
-        />
-        <Route 
-          path="*" 
-          element={<Navigate to="/dashboard" replace />} 
-        />
-      </Routes>
-    </Router>
+    <QueryProvider>
+      <Router>
+        <Routes>
+          <Route 
+            path="/login" 
+            element={
+              isAuthenticated ? (
+                <Navigate to="/dashboard" replace />
+              ) : (
+                <LoginForm onLoginSuccess={handleLoginSuccess} />
+              )
+            } 
+          />
+          <Route 
+            path="/dashboard" 
+            element={
+              <ProtectedRoute>
+                <CompletePersianAIDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/" 
+            element={<Navigate to="/dashboard" replace />} 
+          />
+          <Route 
+            path="*" 
+            element={<Navigate to="/dashboard" replace />} 
+          />
+        </Routes>
+      </Router>
+    </QueryProvider>
   );
 };
 
