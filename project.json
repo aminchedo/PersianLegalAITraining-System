@@ -1,0 +1,15 @@
+{
+  "name": "persian-legal-ai-training-system",
+  "version": "1.0.0",
+  "description": "Advanced Persian Legal AI Training System with DoRA and QR-Adaptor",
+  "structure": {
+    "backend": "FastAPI + Python 3.10.12",
+    "frontend": "React TypeScript + Vite",
+    "database": "PostgreSQL/SQLite with FTS5",
+    "ai_models": "DoRA + QR-Adaptor implementations",
+    "deployment": "Docker Compose"
+  },
+  "quick_start": "./scripts/start_system.sh",
+  "documentation": "./docs/",
+  "last_cleanup": "2025-09-08T08:27:00Z"
+}

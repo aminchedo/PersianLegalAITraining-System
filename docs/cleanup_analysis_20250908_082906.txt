@@ -1,0 +1,86 @@
+📊 CURRENT PROJECT ANALYSIS:
+Date: Mon Sep  8 08:26:42 AM UTC 2025
+Total files: 397
+Python files: 156
+TypeScript files: 90
+Directory size: 7.0M
+
+📁 ROOT DIRECTORY CONTENTS:
+total 448
+drwxr-xr-x 20 ubuntu ubuntu  4096 Sep  8 08:26 .
+drwxr-xr-x  1 root   root    4096 Sep  8 08:23 ..
+drwxr-xr-x  3 ubuntu ubuntu  4096 Sep  8 08:26 archives
+drwxr-xr-x 16 ubuntu ubuntu  4096 Sep  8 08:23 backend
+drwxr-xr-x  2 ubuntu ubuntu  4096 Sep  8 08:23 backup_20250905_061533
+drwxr-xr-x  2 ubuntu ubuntu  4096 Sep  8 08:23 backup_20250905_061538
+-rw-r--r--  1 ubuntu ubuntu   177 Sep  8 08:26 cleanup_analysis.txt
+drwxr-xr-x  2 ubuntu ubuntu  4096 Sep  8 08:23 config
+drwxr-xr-x  2 ubuntu ubuntu  4096 Sep  8 08:23 data
+-rwxr-xr-x  1 ubuntu ubuntu  5727 Sep  8 08:23 deploy_docker.sh
+-rwxr-xr-x  1 ubuntu ubuntu 10143 Sep  8 08:23 deploy_to_main.sh
+-rw-r--r--  1 ubuntu ubuntu  3765 Sep  8 08:23 docker-compose.yml
+drwxr-xr-x  5 ubuntu ubuntu  4096 Sep  8 08:23 docs
+-rw-r--r--  1 ubuntu ubuntu   894 Sep  8 08:23 .env.development
+-rw-r--r--  1 ubuntu ubuntu   985 Sep  8 08:23 .env.production
+drwxr-xr-x  3 ubuntu ubuntu  4096 Sep  8 08:23 frontend
+drwxr-xr-x  7 ubuntu ubuntu  4096 Sep  8 08:23 .git
+-rw-r--r--  1 ubuntu ubuntu  2061 Sep  8 08:23 .gitignore
+-rw-r--r--  1 ubuntu ubuntu  1305 Sep  8 08:23 index.html
+-rwxr-xr-x  1 ubuntu ubuntu  2306 Sep  8 08:23 install-versions.sh
+drwxr-xr-x  2 ubuntu ubuntu  4096 Sep  8 08:23 interface
+-rw-r--r--  1 ubuntu ubuntu  7953 Sep  8 08:23 IRANIAN_LEGAL_ARCHIVE_SYSTEM.md
+-rw-r--r--  1 ubuntu ubuntu 18743 Sep  8 08:23 main.py
+drwxr-xr-x  2 ubuntu ubuntu  4096 Sep  8 08:23 models
+-rw-r--r--  1 ubuntu ubuntu     7 Sep  8 08:23 .nvmrc
+drwxr-xr-x  2 ubuntu ubuntu  4096 Sep  8 08:23 optimization
+-rw-r--r--  1 ubuntu ubuntu  1328 Sep  8 08:23 package.json
+-rw-r--r--  1 ubuntu ubuntu 32768 Sep  8 08:23 persian_legal_ai.db-shm
+-rw-r--r--  1 ubuntu ubuntu     0 Sep  8 08:23 persian_legal_ai.db-wal
+-rw-r--r--  1 ubuntu ubuntu 19107 Sep  8 08:23 persian_readme.md
+-rw-r--r--  1 ubuntu ubuntu  2569 Sep  8 08:23 pyproject.toml
+-rw-r--r--  1 ubuntu ubuntu 66720 Sep  8 08:23 README.md
+-rw-r--r--  1 ubuntu ubuntu  8271 Sep  8 08:23 README_REAL_DATA.md
+-rw-r--r--  1 ubuntu ubuntu  1278 Sep  8 08:23 requirements-compatible.txt
+-rw-r--r--  1 ubuntu ubuntu  1408 Sep  8 08:23 requirements.txt
+-rw-r--r--  1 ubuntu ubuntu  1763 Sep  8 08:23 run_dashboard.py
+-rwxr-xr-x  1 ubuntu ubuntu  7797 Sep  8 08:23 run_exhaustive_tests.sh
+-rw-r--r--  1 ubuntu ubuntu 24331 Sep  8 08:23 run_full_system_test.py
+-rw-r--r--  1 ubuntu ubuntu    14 Sep  8 08:23 runtime.txt
+drwxr-xr-x  2 ubuntu ubuntu  4096 Sep  8 08:23 scripts
+drwxr-xr-x  2 ubuntu ubuntu  4096 Sep  8 08:23 services
+drwxr-xr-x  6 ubuntu ubuntu  4096 Sep  8 08:23 src
+-rwxr-xr-x  1 ubuntu ubuntu  6563 Sep  8 08:23 start-full-system.sh
+-rw-r--r--  1 ubuntu ubuntu 13438 Sep  8 08:23 start_system_improved.py
+-rwxr-xr-x  1 ubuntu ubuntu 13319 Sep  8 08:23 start_system.py
+-rw-r--r--  1 ubuntu ubuntu   980 Sep  8 08:23 tailwind.config.js
+drwxr-xr-x  2 ubuntu ubuntu  4096 Sep  8 08:23 test
+drwxr-xr-x  5 ubuntu ubuntu  4096 Sep  8 08:23 tests
+-rwxr-xr-x  1 ubuntu ubuntu  5341 Sep  8 08:23 update_frontend.sh
+-rw-r--r--  1 ubuntu ubuntu 12374 Sep  8 08:23 UPGRADE_REPORT.md
+drwxr-xr-x  2 ubuntu ubuntu  4096 Sep  8 08:23 utils
+-rwxr-xr-x  1 ubuntu ubuntu 24713 Sep  8 08:23 validate_system.py
+-rwxr-xr-x  1 ubuntu ubuntu  6660 Sep  8 08:23 validate-system.sh
+-rwxr-xr-x  1 ubuntu ubuntu  3167 Sep  8 08:23 version-verification.sh
+-rw-r--r--  1 ubuntu ubuntu   482 Sep  8 08:23 vite.config.ts
+
+🌳 CURRENT STRUCTURE:
+.
+./scripts
+./models
+./src
+./src/types
+./src/components
+./src/hooks
+./src/services
+./optimization
+./tests
+./tests/integration
+./tests/performance
+./tests/training
+./docs
+./docs/references
+./docs/development
+./docs/guides
+./.git
+./.git/info
+./.git/logs
