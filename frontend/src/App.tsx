@@ -1,101 +1,51 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import './App.css';
 
-// Import components
-import LoginForm from './components/auth/LoginForm';
-import CompletePersianAIDashboard from './components/CompletePersianAIDashboard';
+// Persian UI Components
+import PersianLayout from './components/layout/PersianLayout';
+import HomePage from './pages/HomePage';
+import DocumentsPage from './pages/DocumentsPage';
+import TrainingPage from './pages/TrainingPage';
+import ClassificationPage from './pages/ClassificationPage';
+import SystemPage from './pages/SystemPage';
 
-// Import services
-import authService from './services/authService';
+// Create query client with Persian-optimized settings
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      cacheTime: 10 * 60 * 1000, // 10 minutes
+      retry: 3,
+      refetchOnWindowFocus: false,
+    },
+    mutations: {
+      retry: 1,
+    },
+  },
+});
 
-// Import Query Provider
-import { QueryProvider } from './providers/QueryProvider';
-
-
-// Protected Route component
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    const checkAuth = () => {
-      const authenticated = authService.isAuthenticated();
-      setIsAuthenticated(authenticated);
-    };
-
-    checkAuth();
-  }, []);
-
-  if (isAuthenticated === null) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600"></div>
-      </div>
-    );
-  }
-
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
-};
-
-// Main App component
-const App: React.FC = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    const checkAuth = () => {
-      const authenticated = authService.isAuthenticated();
-      setIsAuthenticated(authenticated);
-    };
-
-    checkAuth();
-  }, []);
-
-  const handleLoginSuccess = () => {
-    setIsAuthenticated(true);
-  };
-
-  if (isAuthenticated === null) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600"></div>
-      </div>
-    );
-  }
-
+function App() {
   return (
-    <QueryProvider>
+    <QueryClientProvider client={queryClient}>
       <Router>
-        <Routes>
-          <Route 
-            path="/login" 
-            element={
-              isAuthenticated ? (
-                <Navigate to="/dashboard" replace />
-              ) : (
-                <LoginForm onLoginSuccess={handleLoginSuccess} />
-              )
-            } 
-          />
-          <Route 
-            path="/dashboard" 
-            element={
-              <ProtectedRoute>
-                <CompletePersianAIDashboard />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/" 
-            element={<Navigate to="/dashboard" replace />} 
-          />
-          <Route 
-            path="*" 
-            element={<Navigate to="/dashboard" replace />} 
-          />
-        </Routes>
+        <div className="App" dir="rtl" lang="fa">
+          <PersianLayout>
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/documents" element={<DocumentsPage />} />
+              <Route path="/training" element={<TrainingPage />} />
+              <Route path="/classification" element={<ClassificationPage />} />
+              <Route path="/system" element={<SystemPage />} />
+            </Routes>
+          </PersianLayout>
+        </div>
       </Router>
-    </QueryProvider>
+      <ReactQueryDevtools initialIsOpen={false} />
+    </QueryClientProvider>
   );
-};
+}
 
 export default App;
