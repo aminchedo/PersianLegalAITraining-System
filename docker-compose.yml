@@ -1,0 +1,276 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database with Persian locale support
+  postgres:
+    image: postgres:15-alpine
+    container_name: persian-legal-postgres-dev
+    environment:
+      POSTGRES_DB: persian_legal_ai_dev
+      POSTGRES_USER: persian_dev_user
+      POSTGRES_PASSWORD: persian_dev_2024
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C.UTF-8"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./backend/database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      # Mount development SQL scripts
+      - ./scripts/dev_data.sql:/docker-entrypoint-initdb.d/02_dev_data.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - persian-dev-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U persian_dev_user -d persian_legal_ai_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    command: >
+      postgres 
+      -c shared_preload_libraries=pg_stat_statements
+      -c pg_stat_statements.track=all
+      -c max_connections=100
+      -c log_statement=all
+      -c log_destination=stderr
+      -c logging_collector=on
+
+  # Redis Cache for development
+  redis:
+    image: redis:7-alpine
+    container_name: persian-legal-redis-dev
+    command: redis-server --requirepass redis_dev_2024 --appendonly yes
+    volumes:
+      - redis_dev_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - persian-dev-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "redis_dev_2024", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # FastAPI Backend Development Service
+  persian-legal-backend-dev:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: development
+    container_name: persian-legal-backend-dev
+    environment:
+      - DATABASE_URL=postgresql://persian_dev_user:persian_dev_2024@postgres:5432/persian_legal_ai_dev
+      - REDIS_URL=redis://:redis_dev_2024@redis:6379/0
+      - ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+      - CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173
+      - PYTHONPATH=/app:/app/backend
+      - RELOAD=true
+    volumes:
+      # Mount source code for hot reload
+      - ./backend:/app/backend:cached
+      - ./models:/app/models:cached
+      - ./configs:/app/configs:cached
+      - ./data:/app/data:cached
+      # Mount for model storage and logs
+      - dev_model_storage:/app/models_storage
+      - dev_training_logs:/app/logs
+      - dev_temp_files:/tmp
+    ports:
+      - "8000:8000"
+      - "8001:8001"  # Debug port
+    networks:
+      - persian-dev-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/system/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    command: >
+      sh -c "
+        cd /app/backend && 
+        python -m uvicorn main:app 
+        --host 0.0.0.0 
+        --port 8000 
+        --reload 
+        --reload-dir /app/backend 
+        --reload-dir /app/models 
+        --log-level debug
+      "
+
+  # React Frontend Development Service
+  persian-legal-frontend-dev:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    container_name: persian-legal-frontend-dev
+    environment:
+      - NODE_ENV=development
+      - VITE_API_URL=http://localhost:8000
+      - VITE_WS_URL=ws://localhost:8000
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+    volumes:
+      # Mount source code for hot reload
+      - ./frontend/src:/app/src:cached
+      - ./frontend/public:/app/public:cached
+      - ./frontend/index.html:/app/index.html:cached
+      - ./frontend/vite.config.ts:/app/vite.config.ts:cached
+      - ./frontend/tailwind.config.js:/app/tailwind.config.js:cached
+      - ./frontend/tsconfig.json:/app/tsconfig.json:cached
+      # Node modules volume for performance
+      - frontend_node_modules:/app/node_modules
+    ports:
+      - "3000:3000"
+      - "24678:24678"  # Vite HMR port
+    networks:
+      - persian-dev-network
+    depends_on:
+      - persian-legal-backend-dev
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    command: >
+      sh -c "
+        npm install &&
+        npm run dev -- --host 0.0.0.0 --port 3000
+      "
+
+  # Nginx Development Proxy (Optional)
+  nginx-dev:
+    image: nginx:alpine
+    container_name: persian-legal-nginx-dev
+    volumes:
+      - ./nginx/nginx.dev.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+    networks:
+      - persian-dev-network
+    depends_on:
+      - persian-legal-backend-dev
+      - persian-legal-frontend-dev
+    restart: unless-stopped
+    profiles:
+      - with-proxy
+
+  # Development Database Admin (pgAdmin)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: persian-legal-pgadmin-dev
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@persian-legal.dev
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    volumes:
+      - pgadmin_dev_data:/var/lib/pgadmin
+    ports:
+      - "5050:80"
+    networks:
+      - persian-dev-network
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    profiles:
+      - with-admin
+
+  # Redis Commander for Redis management
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: persian-legal-redis-commander-dev
+    environment:
+      - REDIS_HOSTS=redis:redis:6379:0:redis_dev_2024
+      - HTTP_USER=admin
+      - HTTP_PASSWORD=admin123
+    ports:
+      - "8081:8081"
+    networks:
+      - persian-dev-network
+    depends_on:
+      - redis
+    restart: unless-stopped
+    profiles:
+      - with-admin
+
+  # Development Testing Service
+  test-runner:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: testing
+    container_name: persian-legal-test-runner
+    environment:
+      - DATABASE_URL=postgresql://persian_dev_user:persian_dev_2024@postgres:5432/persian_legal_ai_dev
+      - REDIS_URL=redis://:redis_dev_2024@redis:6379/1
+      - ENVIRONMENT=testing
+      - PYTHONPATH=/app:/app/backend
+    volumes:
+      - ./backend:/app/backend:cached
+      - ./models:/app/models:cached
+      - ./tests:/app/tests:cached
+      - ./scripts:/app/scripts:cached
+      - test_reports:/app/test_reports
+    networks:
+      - persian-dev-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - testing
+    command: >
+      sh -c "
+        echo 'Test runner ready. Use: docker-compose run test-runner pytest' &&
+        tail -f /dev/null
+      "
+
+volumes:
+  postgres_dev_data:
+    driver: local
+  redis_dev_data:
+    driver: local
+  pgadmin_dev_data:
+    driver: local
+  dev_model_storage:
+    driver: local
+  dev_training_logs:
+    driver: local
+  dev_temp_files:
+    driver: local
+  frontend_node_modules:
+    driver: local
+  test_reports:
+    driver: local
+
+networks:
+  persian-dev-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+    labels:
+      - "com.persian-legal-ai.network=development"
+
+# Development-specific configurations
+x-common-variables: &common-variables
+  TZ: Asia/Tehran
+  LANG: C.UTF-8
+  LC_ALL: C.UTF-8

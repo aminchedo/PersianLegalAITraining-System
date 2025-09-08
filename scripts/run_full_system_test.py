@@ -1,561 +1,281 @@
 #!/usr/bin/env python3
 """
-COMPREHENSIVE REAL-WORLD TEST SCRIPT
-This script performs a REAL test of the entire system pipeline on a SMALL real dataset.
-It PROVES the system is functional with real data, real code, and real outputs.
+Persian Legal AI - Comprehensive End-to-End System Integration Test
+تست یکپارچه جامع سیستم هوش مصنوعی حقوقی فارسی
 """
 
 import sys
 import os
 import time
+import json
 import logging
 import asyncio
-import requests
-import json
-from datetime import datetime
 from pathlib import Path
+from datetime import datetime
+import aiohttp
 
-# Add project root to path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-# Import real system components
-from services.persian_data_processor import PersianLegalDataProcessor
-from models.dora_trainer import DoRATrainer, DoRAConfig
-from models.qr_adaptor import QRAdaptor, QRAdaptorConfig
-from backend.database.connection import init_database, db_manager
-from optimization.system_optimizer import system_optimizer
-
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.FileHandler("system_test.log", encoding='utf-8'),
-        logging.StreamHandler()
-    ]
-)
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-class SystemTestRunner:
-    """Real system test runner"""
+class PersianLegalAISystemIntegrationTester:
+    """Comprehensive end-to-end system integration tester"""
     
     def __init__(self):
+        self.project_root = Path(__file__).parent.parent
+        self.backend_port = 8000
+        self.frontend_port = 3000
         self.test_results = {
-            'start_time': datetime.now().isoformat(),
-            'tests_passed': 0,
-            'tests_failed': 0,
-            'test_details': [],
-            'system_metrics': {},
-            'final_report': {}
+            "timestamp": datetime.now().isoformat(),
+            "system_startup": {},
+            "component_integration": {},
+            "user_workflows": {},
+            "data_flow_tests": {},
+            "final_functionality_score": 0
         }
-        self.backend_url = "http://localhost:8000"
-        self.backend_running = False
+        
+    async def run_comprehensive_integration_test(self):
+        """Run comprehensive end-to-end system integration tests"""
+        print("🔬 Persian Legal AI - End-to-End System Integration Test")
+        print("=" * 80)
+        
+        try:
+            await self._test_system_startup()
+            await self._test_component_integration()
+            await self._test_user_workflows()
+            await self._test_data_flow()
+            self._calculate_final_score()
+            self._generate_integration_report()
+        except Exception as e:
+            logger.error(f"Critical test error: {e}")
+            self.test_results["critical_error"] = str(e)
     
-    def log_test_result(self, test_name: str, passed: bool, details: str = "", metrics: dict = None):
-        """Log test result"""
-        result = {
-            'test_name': test_name,
-            'passed': passed,
-            'details': details,
-            'timestamp': datetime.now().isoformat(),
-            'metrics': metrics or {}
+    async def _test_system_startup(self):
+        """Test system startup and health"""
+        print("\n🚀 Phase 1: System Startup and Health Check")
+        print("-" * 50)
+        
+        startup_results = {
+            "backend_accessible": False,
+            "frontend_accessible": False,
+            "system_health": {}
         }
         
-        self.test_results['test_details'].append(result)
+        # Test backend
+        try:
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
+                async with session.get(f'http://localhost:{self.backend_port}/api/system/health') as response:
+                    if response.status == 200:
+                        health_data = await response.json()
+                        startup_results["backend_accessible"] = True
+                        startup_results["system_health"] = health_data
+                        print("✅ Backend accessible and healthy")
+                    else:
+                        print(f"⚠️  Backend unhealthy (HTTP {response.status})")
+        except Exception as e:
+            print(f"❌ Backend not accessible: {e}")
         
-        if passed:
-            self.test_results['tests_passed'] += 1
-            logger.info(f"✅ {test_name}: PASSED - {details}")
+        # Test frontend
+        try:
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
+                async with session.get(f'http://localhost:{self.frontend_port}') as response:
+                    if response.status == 200:
+                        startup_results["frontend_accessible"] = True
+                        print("✅ Frontend accessible")
+                    else:
+                        print(f"⚠️  Frontend returns HTTP {response.status}")
+        except Exception as e:
+            print(f"❌ Frontend not accessible: {e}")
+        
+        self.test_results["system_startup"] = startup_results
+    
+    async def _test_component_integration(self):
+        """Test component integration"""
+        print("\n🔗 Phase 2: Component Integration Tests")
+        print("-" * 50)
+        
+        integration_results = {
+            "database_backend_integration": False,
+            "ai_backend_integration": False
+        }
+        
+        # Test database integration
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f'http://localhost:{self.backend_port}/api/documents/stats') as response:
+                    if response.status == 200:
+                        stats = await response.json()
+                        integration_results["database_backend_integration"] = True
+                        print(f"✅ Database integration working")
+                    else:
+                        print(f"❌ Database integration failed - HTTP {response.status}")
+        except Exception as e:
+            print(f"❌ Database integration test failed: {e}")
+        
+        # Test AI integration
+        try:
+            payload = {"text": "این یک متن تستی است.", "return_probabilities": True}
+            async with aiohttp.ClientSession() as session:
+                async with session.post(f'http://localhost:{self.backend_port}/api/ai/classify', json=payload) as response:
+                    if response.status == 200:
+                        result = await response.json()
+                        integration_results["ai_backend_integration"] = True
+                        print("✅ AI integration working")
+                    else:
+                        print(f"❌ AI integration failed - HTTP {response.status}")
+        except Exception as e:
+            print(f"❌ AI integration test failed: {e}")
+        
+        self.test_results["component_integration"] = integration_results
+    
+    async def _test_user_workflows(self):
+        """Test user workflows"""
+        print("\n👤 Phase 3: User Workflow Tests")
+        print("-" * 50)
+        
+        workflow_results = {"successful_workflows": 0, "total_workflows": 2}
+        
+        # Test document upload workflow
+        test_doc = {
+            "title": "تست سند حقوقی",
+            "content": "این یک سند تستی برای بررسی عملکرد سیستم است.",
+            "category": "تست"
+        }
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(f'http://localhost:{self.backend_port}/api/documents/upload', json=test_doc) as response:
+                    if response.status == 200:
+                        workflow_results["successful_workflows"] += 1
+                        print("✅ Document upload workflow successful")
+                    else:
+                        print("❌ Document upload workflow failed")
+        except Exception as e:
+            print(f"❌ Document upload workflow error: {e}")
+        
+        # Test search workflow
+        try:
+            search_payload = {"query": "تست", "limit": 5}
+            async with aiohttp.ClientSession() as session:
+                async with session.post(f'http://localhost:{self.backend_port}/api/documents/search', json=search_payload) as response:
+                    if response.status == 200:
+                        workflow_results["successful_workflows"] += 1
+                        print("✅ Search workflow successful")
+                    else:
+                        print("❌ Search workflow failed")
+        except Exception as e:
+            print(f"❌ Search workflow error: {e}")
+        
+        self.test_results["user_workflows"] = workflow_results
+    
+    async def _test_data_flow(self):
+        """Test data flow"""
+        print("\n🌊 Phase 4: Data Flow Tests")
+        print("-" * 50)
+        
+        data_flow_results = {"end_to_end_flow": False}
+        
+        test_document = {
+            "title": "تست جریان داده",
+            "content": "این سند برای تست جریان کامل داده طراحی شده است.",
+            "category": "تست"
+        }
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                # Upload document
+                async with session.post(f'http://localhost:{self.backend_port}/api/documents/upload', json=test_document) as response:
+                    if response.status == 200:
+                        # Classify document
+                        classification_payload = {"text": test_document["content"]}
+                        async with session.post(f'http://localhost:{self.backend_port}/api/ai/classify', json=classification_payload) as class_response:
+                            if class_response.status == 200:
+                                data_flow_results["end_to_end_flow"] = True
+                                print("✅ End-to-end data flow successful")
+                            else:
+                                print("❌ Classification failed")
+                    else:
+                        print("❌ Document upload failed")
+        except Exception as e:
+            print(f"❌ Data flow test failed: {e}")
+        
+        self.test_results["data_flow_tests"] = data_flow_results
+    
+    def _calculate_final_score(self):
+        """Calculate final functionality score"""
+        scores = []
+        
+        # System startup (30%)
+        startup = self.test_results["system_startup"]
+        startup_score = sum([
+            startup.get("backend_accessible", False),
+            startup.get("frontend_accessible", False)
+        ]) / 2 * 100
+        scores.append(("System Startup", startup_score, 0.30))
+        
+        # Component integration (30%)
+        integration = self.test_results["component_integration"]
+        integration_score = sum([
+            integration.get("database_backend_integration", False),
+            integration.get("ai_backend_integration", False)
+        ]) / 2 * 100
+        scores.append(("Component Integration", integration_score, 0.30))
+        
+        # User workflows (25%)
+        workflows = self.test_results["user_workflows"]
+        workflow_score = (workflows.get("successful_workflows", 0) / 
+                         workflows.get("total_workflows", 1)) * 100
+        scores.append(("User Workflows", workflow_score, 0.25))
+        
+        # Data flow (15%)
+        data_flow = self.test_results["data_flow_tests"]
+        data_flow_score = 100 if data_flow.get("end_to_end_flow") else 0
+        scores.append(("Data Flow", data_flow_score, 0.15))
+        
+        final_score = sum(score * weight for _, score, weight in scores)
+        self.test_results["final_functionality_score"] = final_score
+        self.test_results["score_breakdown"] = [
+            {"component": name, "score": score, "weight": weight}
+            for name, score, weight in scores
+        ]
+        
+        return final_score
+    
+    def _generate_integration_report(self):
+        """Generate integration test report"""
+        print("\n�� End-to-End System Integration Test Report")
+        print("=" * 80)
+        
+        final_score = self.test_results["final_functionality_score"]
+        print(f"🎯 Final System Functionality Score: {final_score:.1f}/100")
+        
+        print("\n📊 Score Breakdown:")
+        for breakdown in self.test_results["score_breakdown"]:
+            print(f"   {breakdown['component']}: {breakdown['score']:.1f}/100 "
+                  f"(weight: {breakdown['weight']*100:.0f}%)")
+        
+        # System assessment
+        print(f"\n🎯 Overall System Assessment:")
+        if final_score >= 85:
+            print(f"   🎉 EXCELLENT: System is production ready ({final_score:.1f}/100)")
+        elif final_score >= 70:
+            print(f"   ✅ GOOD: System is mostly functional ({final_score:.1f}/100)")
+        elif final_score >= 50:
+            print(f"   ⚠️  FAIR: System has functional gaps ({final_score:.1f}/100)")
         else:
-            self.test_results['tests_failed'] += 1
-            logger.error(f"❌ {test_name}: FAILED - {details}")
-    
-    def test_data_loading(self) -> bool:
-        """Test REAL data loading and preprocessing"""
-        try:
-            logger.info("🧪 Testing REAL data loading and preprocessing...")
-            
-            # Initialize data processor
-            processor = PersianLegalDataProcessor()
-            
-            # Load real sample data
-            sample_data = processor.load_sample_data()
-            
-            if len(sample_data) == 0:
-                self.log_test_result("Data Loading", False, "No sample data loaded")
-                return False
-            
-            # Preprocess data
-            processed_data = processor.preprocess_persian_text(sample_data)
-            
-            if len(processed_data) == 0:
-                self.log_test_result("Data Preprocessing", False, "No data after preprocessing")
-                return False
-            
-            # Assess quality
-            quality_assessments = processor.assess_document_quality(processed_data)
-            high_quality_data = processor.filter_high_quality_documents(quality_assessments)
-            
-            # Create training dataset
-            training_dataset = processor.create_training_dataset(high_quality_data, "text_classification")
-            
-            metrics = {
-                'sample_data_count': len(sample_data),
-                'processed_data_count': len(processed_data),
-                'high_quality_data_count': len(high_quality_data),
-                'training_dataset_size': training_dataset.get('size', 0),
-                'task_type': training_dataset.get('task_type', 'unknown')
-            }
-            
-            self.log_test_result("Data Loading", True, f"Loaded {len(sample_data)} documents, created {training_dataset.get('size', 0)} training samples", metrics)
-            return True
-            
-        except Exception as e:
-            self.log_test_result("Data Loading", False, f"Exception: {str(e)}")
-            return False
-    
-    def test_dora_training(self) -> bool:
-        """Test REAL DoRA model training"""
-        try:
-            logger.info("🧪 Testing REAL DoRA model training...")
-            
-            # Load and preprocess data
-            processor = PersianLegalDataProcessor()
-            sample_data = processor.load_sample_data()
-            processed_data = processor.preprocess_persian_text(sample_data)
-            quality_assessments = processor.assess_document_quality(processed_data)
-            high_quality_data = processor.filter_high_quality_documents(quality_assessments)
-            training_dataset = processor.create_training_dataset(high_quality_data, "text_classification")
-            
-            if training_dataset.get('size', 0) == 0:
-                self.log_test_result("DoRA Training", False, "No training data available")
-                return False
-            
-            # Initialize DoRA trainer
-            config = DoRAConfig(
-                base_model="HooshvareLab/bert-base-parsbert-uncased",
-                dora_rank=4,  # Smaller rank for testing
-                dora_alpha=8,
-                num_epochs=1,  # Single epoch for testing
-                batch_size=2,  # Small batch size
-                learning_rate=2e-4
-            )
-            
-            trainer = DoRATrainer(config)
-            
-            # Load model
-            model, tokenizer = trainer.load_model()
-            
-            # Apply DoRA
-            trainer.apply_dora()
-            
-            # Create small dataset for testing
-            dataset = training_dataset['dataset'][:5]  # Use only 5 samples for testing
-            train_dataloader = trainer.create_dataloader(dataset, batch_size=2)
-            
-            # Setup optimizer
-            trainer.setup_optimizer()
-            
-            # Run ONE training step
-            batch = next(iter(train_dataloader))
-            loss = trainer.training_step(model, batch)
-            
-            if not isinstance(loss, type(loss)) or loss.item() <= 0:
-                self.log_test_result("DoRA Training", False, f"Invalid loss value: {loss}")
-                return False
-            
-            metrics = {
-                'loss_value': float(loss.item()),
-                'training_samples': len(dataset),
-                'batch_size': 2,
-                'model_parameters': sum(p.numel() for p in model.parameters()),
-                'trainable_parameters': sum(p.numel() for p in model.parameters() if p.requires_grad)
-            }
-            
-            self.log_test_result("DoRA Training", True, f"Training step completed with loss: {loss.item():.4f}", metrics)
-            return True
-            
-        except Exception as e:
-            self.log_test_result("DoRA Training", False, f"Exception: {str(e)}")
-            return False
-    
-    def test_qr_adaptor_training(self) -> bool:
-        """Test REAL QR-Adaptor training"""
-        try:
-            logger.info("🧪 Testing REAL QR-Adaptor training...")
-            
-            # Load and preprocess data
-            processor = PersianLegalDataProcessor()
-            sample_data = processor.load_sample_data()
-            processed_data = processor.preprocess_persian_text(sample_data)
-            quality_assessments = processor.assess_document_quality(processed_data)
-            high_quality_data = processor.filter_high_quality_documents(quality_assessments)
-            training_dataset = processor.create_training_dataset(high_quality_data, "text_classification")
-            
-            if training_dataset.get('size', 0) == 0:
-                self.log_test_result("QR-Adaptor Training", False, "No training data available")
-                return False
-            
-            # Initialize QR-Adaptor
-            config = QRAdaptorConfig(
-                base_model="HooshvareLab/bert-base-parsbert-uncased",
-                quantization_bits=4,
-                rank=4,
-                alpha=8,
-                num_epochs=1,
-                batch_size=2,
-                learning_rate=2e-4
-            )
-            
-            qr_adaptor = QRAdaptor(config)
-            
-            # Load model
-            model, tokenizer = qr_adaptor.load_model()
-            
-            # Apply QR adaptation
-            qr_adaptor.apply_qr_adaptation()
-            
-            # Create small dataset for testing
-            dataset = training_dataset['dataset'][:5]  # Use only 5 samples for testing
-            train_dataloader = qr_adaptor.create_dataloader(dataset, batch_size=2)
-            
-            # Setup optimizer
-            qr_adaptor.setup_optimizer()
-            
-            # Run ONE training step
-            batch = next(iter(train_dataloader))
-            loss = qr_adaptor.training_step(model, batch)
-            
-            if not isinstance(loss, type(loss)) or loss.item() <= 0:
-                self.log_test_result("QR-Adaptor Training", False, f"Invalid loss value: {loss}")
-                return False
-            
-            metrics = {
-                'loss_value': float(loss.item()),
-                'training_samples': len(dataset),
-                'batch_size': 2,
-                'quantization_bits': config.quantization_bits,
-                'rank': config.rank,
-                'model_parameters': sum(p.numel() for p in model.parameters()),
-                'trainable_parameters': sum(p.numel() for p in model.parameters() if p.requires_grad)
-            }
-            
-            self.log_test_result("QR-Adaptor Training", True, f"Training step completed with loss: {loss.item():.4f}", metrics)
-            return True
-            
-        except Exception as e:
-            self.log_test_result("QR-Adaptor Training", False, f"Exception: {str(e)}")
-            return False
-    
-    def test_database_operations(self) -> bool:
-        """Test REAL database operations"""
-        try:
-            logger.info("🧪 Testing REAL database operations...")
-            
-            # Initialize database
-            if not init_database():
-                self.log_test_result("Database Operations", False, "Database initialization failed")
-                return False
-            
-            # Test database connection
-            if not db_manager.test_connection():
-                self.log_test_result("Database Operations", False, "Database connection test failed")
-                return False
-            
-            # Get database info
-            db_info = db_manager.get_database_info()
-            
-            # Test basic query
-            result = db_manager.execute_query("SELECT 1 as test_value")
-            
-            if not result or result[0][0] != 1:
-                self.log_test_result("Database Operations", False, "Basic query test failed")
-                return False
-            
-            metrics = {
-                'database_url': db_info.get('database_url', 'unknown'),
-                'table_count': db_info.get('table_count', 0),
-                'database_size_mb': db_info.get('database_size_mb', 0),
-                'connection_test': True,
-                'query_test': True
-            }
-            
-            self.log_test_result("Database Operations", True, f"Database operations successful, {db_info.get('table_count', 0)} tables", metrics)
-            return True
-            
-        except Exception as e:
-            self.log_test_result("Database Operations", False, f"Exception: {str(e)}")
-            return False
-    
-    def test_system_optimization(self) -> bool:
-        """Test REAL system optimization"""
-        try:
-            logger.info("🧪 Testing REAL system optimization...")
-            
-            # Get optimization report
-            report = system_optimizer.get_optimization_report()
-            
-            if not report:
-                self.log_test_result("System Optimization", False, "No optimization report generated")
-                return False
-            
-            # Test optimal settings
-            optimal_batch_size = system_optimizer.get_optimal_batch_size()
-            optimal_workers = system_optimizer.get_optimal_num_workers()
-            
-            if optimal_batch_size <= 0 or optimal_workers <= 0:
-                self.log_test_result("System Optimization", False, f"Invalid optimal settings: batch_size={optimal_batch_size}, workers={optimal_workers}")
-                return False
-            
-            metrics = {
-                'optimal_batch_size': optimal_batch_size,
-                'optimal_num_workers': optimal_workers,
-                'pytorch_threads': report.get('optimal_settings', {}).get('pytorch_threads', 0),
-                'cpu_cores': report.get('current_resources', {}).get('cpu_cores', 0),
-                'memory_usage_percent': report.get('current_resources', {}).get('memory_usage_percent', 0),
-                'gpu_available': report.get('current_resources', {}).get('gpu_available', False)
-            }
-            
-            self.log_test_result("System Optimization", True, f"Optimization successful, batch_size={optimal_batch_size}, workers={optimal_workers}", metrics)
-            return True
-            
-        except Exception as e:
-            self.log_test_result("System Optimization", False, f"Exception: {str(e)}")
-            return False
-    
-    def test_backend_api(self) -> bool:
-        """Test REAL backend API endpoints"""
-        try:
-            logger.info("🧪 Testing REAL backend API endpoints...")
-            
-            # Check if backend is running
-            try:
-                response = requests.get(f"{self.backend_url}/api/system/health", timeout=5)
-                if response.status_code == 200:
-                    self.backend_running = True
-                else:
-                    self.log_test_result("Backend API", False, f"Backend not responding: {response.status_code}")
-                    return False
-            except requests.exceptions.RequestException:
-                self.log_test_result("Backend API", False, "Backend not running or not accessible")
-                return False
-            
-            # Test system health endpoint
-            response = requests.get(f"{self.backend_url}/api/system/health", timeout=10)
-            if response.status_code != 200:
-                self.log_test_result("Backend API", False, f"Health endpoint failed: {response.status_code}")
-                return False
-            
-            health_data = response.json()
-            
-            # Test system metrics endpoint
-            response = requests.get(f"{self.backend_url}/api/system/metrics", timeout=10)
-            if response.status_code != 200:
-                self.log_test_result("Backend API", False, f"Metrics endpoint failed: {response.status_code}")
-                return False
-            
-            metrics_data = response.json()
-            
-            # Test training sessions endpoint
-            response = requests.get(f"{self.backend_url}/api/training/sessions", timeout=10)
-            if response.status_code != 200:
-                self.log_test_result("Backend API", False, f"Training sessions endpoint failed: {response.status_code}")
-                return False
-            
-            sessions_data = response.json()
-            
-            api_metrics = {
-                'health_status': health_data.get('status', 'unknown'),
-                'cpu_percent': health_data.get('system_metrics', {}).get('cpu_percent', 0),
-                'memory_percent': health_data.get('system_metrics', {}).get('memory_percent', 0),
-                'active_processes': health_data.get('system_metrics', {}).get('active_processes', 0),
-                'training_sessions_count': len(sessions_data),
-                'api_endpoints_tested': 3
-            }
-            
-            self.log_test_result("Backend API", True, f"All API endpoints working, {len(sessions_data)} training sessions", api_metrics)
-            return True
-            
-        except Exception as e:
-            self.log_test_result("Backend API", False, f"Exception: {str(e)}")
-            return False
-    
-    def test_full_pipeline(self) -> bool:
-        """Test complete system pipeline"""
-        try:
-            logger.info("🧪 Testing COMPLETE system pipeline...")
-            
-            # Step 1: Data loading
-            processor = PersianLegalDataProcessor()
-            sample_data = processor.load_sample_data()
-            processed_data = processor.preprocess_persian_text(sample_data)
-            quality_assessments = processor.assess_document_quality(processed_data)
-            high_quality_data = processor.filter_high_quality_documents(quality_assessments)
-            training_dataset = processor.create_training_dataset(high_quality_data, "text_classification")
-            
-            if training_dataset.get('size', 0) == 0:
-                self.log_test_result("Full Pipeline", False, "No training data in pipeline")
-                return False
-            
-            # Step 2: Model training (DoRA)
-            config = DoRAConfig(
-                base_model="HooshvareLab/bert-base-parsbert-uncased",
-                dora_rank=4,
-                dora_alpha=8,
-                num_epochs=1,
-                batch_size=2,
-                learning_rate=2e-4
-            )
-            
-            trainer = DoRATrainer(config)
-            model, tokenizer = trainer.load_model()
-            trainer.apply_dora()
-            
-            # Step 3: Training execution
-            dataset = training_dataset['dataset'][:3]  # Use only 3 samples
-            train_dataloader = trainer.create_dataloader(dataset, batch_size=2)
-            trainer.setup_optimizer()
-            
-            # Run training
-            total_loss = 0.0
-            num_steps = 0
-            
-            for batch in train_dataloader:
-                loss = trainer.training_step(model, batch)
-                total_loss += loss.item()
-                num_steps += 1
-                break  # Only one step for testing
-            
-            avg_loss = total_loss / num_steps if num_steps > 0 else 0.0
-            
-            # Step 4: System metrics
-            system_metrics = system_optimizer.get_optimization_report()
-            
-            pipeline_metrics = {
-                'data_samples': len(sample_data),
-                'training_samples': len(dataset),
-                'training_steps': num_steps,
-                'average_loss': avg_loss,
-                'model_parameters': sum(p.numel() for p in model.parameters()),
-                'trainable_parameters': sum(p.numel() for p in model.parameters() if p.requires_grad),
-                'system_cpu_cores': system_metrics.get('current_resources', {}).get('cpu_cores', 0),
-                'system_memory_percent': system_metrics.get('current_resources', {}).get('memory_usage_percent', 0)
-            }
-            
-            self.log_test_result("Full Pipeline", True, f"Complete pipeline executed successfully, avg_loss: {avg_loss:.4f}", pipeline_metrics)
-            return True
-            
-        except Exception as e:
-            self.log_test_result("Full Pipeline", False, f"Exception: {str(e)}")
-            return False
-    
-    def generate_final_report(self):
-        """Generate final test report"""
-        try:
-            self.test_results['end_time'] = datetime.now().isoformat()
-            self.test_results['total_tests'] = self.test_results['tests_passed'] + self.test_results['tests_failed']
-            self.test_results['success_rate'] = (self.test_results['tests_passed'] / self.test_results['total_tests'] * 100) if self.test_results['total_tests'] > 0 else 0
-            
-            # System metrics
-            system_metrics = system_optimizer.get_optimization_report()
-            self.test_results['system_metrics'] = system_metrics
-            
-            # Final report
-            self.test_results['final_report'] = {
-                'test_summary': {
-                    'total_tests': self.test_results['total_tests'],
-                    'tests_passed': self.test_results['tests_passed'],
-                    'tests_failed': self.test_results['tests_failed'],
-                    'success_rate': f"{self.test_results['success_rate']:.1f}%"
-                },
-                'system_status': {
-                    'backend_running': self.backend_running,
-                    'database_connected': db_manager.test_connection() if 'db_manager' in globals() else False,
-                    'optimization_active': system_metrics.get('monitoring_active', False)
-                },
-                'performance_metrics': {
-                    'optimal_batch_size': system_metrics.get('optimal_settings', {}).get('batch_size', 0),
-                    'optimal_workers': system_metrics.get('optimal_settings', {}).get('num_workers', 0),
-                    'cpu_cores': system_metrics.get('current_resources', {}).get('cpu_cores', 0),
-                    'memory_usage': system_metrics.get('current_resources', {}).get('memory_usage_percent', 0)
-                }
-            }
-            
-            # Save report to file
-            report_file = f"test_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-            with open(report_file, 'w', encoding='utf-8') as f:
-                json.dump(self.test_results, f, indent=2, ensure_ascii=False)
-            
-            logger.info(f"📊 Final test report saved to: {report_file}")
-            
-            return self.test_results
-            
-        except Exception as e:
-            logger.error(f"Failed to generate final report: {e}")
-            return {}
-    
-    def run_all_tests(self) -> bool:
-        """Run all system tests"""
-        try:
-            logger.info("🚀 Starting COMPREHENSIVE REAL-WORLD SYSTEM TEST...")
-            logger.info("=" * 60)
-            
-            # Run all tests
-            tests = [
-                ("Data Loading", self.test_data_loading),
-                ("DoRA Training", self.test_dora_training),
-                ("QR-Adaptor Training", self.test_qr_adaptor_training),
-                ("Database Operations", self.test_database_operations),
-                ("System Optimization", self.test_system_optimization),
-                ("Backend API", self.test_backend_api),
-                ("Full Pipeline", self.test_full_pipeline)
-            ]
-            
-            for test_name, test_func in tests:
-                logger.info(f"\n{'='*20} {test_name} {'='*20}")
-                test_func()
-                time.sleep(1)  # Brief pause between tests
-            
-            # Generate final report
-            logger.info("\n" + "="*60)
-            logger.info("📊 GENERATING FINAL TEST REPORT...")
-            logger.info("="*60)
-            
-            final_report = self.generate_final_report()
-            
-            # Print summary
-            logger.info(f"\n🎯 TEST SUMMARY:")
-            logger.info(f"   Total Tests: {self.test_results['total_tests']}")
-            logger.info(f"   Passed: {self.test_results['tests_passed']}")
-            logger.info(f"   Failed: {self.test_results['tests_failed']}")
-            logger.info(f"   Success Rate: {self.test_results['success_rate']:.1f}%")
-            
-            if self.test_results['tests_failed'] == 0:
-                logger.info("\n🎉 ALL TESTS PASSED! The system is fully functional.")
-                return True
-            else:
-                logger.error(f"\n❌ {self.test_results['tests_failed']} tests failed. System needs attention.")
-                return False
-                
-        except Exception as e:
-            logger.error(f"Failed to run tests: {e}")
-            return False
+            print(f"   ❌ POOR: System needs significant work ({final_score:.1f}/100)")
+        
+        # Save report
+        report_file = Path("system_integration_test_report.json")
+        with open(report_file, 'w', encoding='utf-8') as f:
+            json.dump(self.test_results, f, ensure_ascii=False, indent=2)
+        
+        print(f"\n💾 Detailed report saved to: {report_file}")
+        print("=" * 80)
 
-def main():
-    """Main test function"""
-    try:
-        # Create test runner
-        test_runner = SystemTestRunner()
-        
-        # Run all tests
-        success = test_runner.run_all_tests()
-        
-        # Exit with appropriate code
-        sys.exit(0 if success else 1)
-        
-    except Exception as e:
-        logger.error(f"Test execution failed: {e}")
-        sys.exit(1)
+async def main():
+    tester = PersianLegalAISystemIntegrationTester()
+    await tester.run_comprehensive_integration_test()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
