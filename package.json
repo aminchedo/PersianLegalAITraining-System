@@ -1,57 +1,46 @@
 {
-  "name": "persian-legal-ai-training-system",
+  "name": "iranian-legal-archive",
+  "private": true,
   "version": "1.0.0",
-  "description": "Persian Legal AI Training System with DoRA & QR-Adaptor - Created by dreammaker",
-  "main": "start_system.py",
+  "type": "module",
+  "description": "Persian Legal Document Archive System with AI Classification and Web Scraping",
   "scripts": {
-    "start": "python start_system.py",
-    "dev": "python start_system.py",
-    "setup": "pip install -r requirements.txt && cd frontend && npm install",
-    "backend": "python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000",
-    "frontend": "cd frontend && npm run dev",
-    "test": "python -m pytest tests/ -v",
-    "test:full": "python run_full_system_test.py",
-    "validate": "bash validate-system.sh",
-    "docker:build": "docker-compose build",
-    "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down",
-    "docker:logs": "docker-compose logs -f",
-    "clean": "find . -name '__pycache__' -exec rm -rf {} + && find . -name '*.pyc' -delete",
-    "format": "black . && isort .",
-    "lint": "flake8 . && cd frontend && npm run lint",
-    "docs": "python -c \"import webbrowser; webbrowser.open('http://localhost:8000/docs')\"",
-    "health": "curl -s http://localhost:8000/api/system/health | python -m json.tool"
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview",
+    "type-check": "tsc --noEmit"
   },
-  "keywords": [
-    "persian",
-    "legal",
-    "ai",
-    "training",
-    "dora",
-    "qr-adaptor",
-    "fastapi",
-    "react",
-    "typescript",
-    "nlp",
-    "machine-learning"
-  ],
-  "author": "dreammaker",
-  "license": "MIT",
-  "engines": {
-    "node": ">=18.17.0",
-    "npm": ">=9.0.0",
-    "python": ">=3.10.0,<3.12.0"
+  "dependencies": {
+    "@tanstack/react-query": "^5.8.4",
+    "@tanstack/react-query-devtools": "^5.8.4",
+    "axios": "^1.6.1",
+    "clsx": "^2.0.0",
+    "lodash": "^4.17.21",
+    "lucide-react": "^0.294.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tailwind-merge": "^2.0.0"
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/yourusername/persian-legal-ai-training-system"
-  },
-  "bugs": {
-    "url": "https://github.com/yourusername/persian-legal-ai-training-system/issues"
-  },
-  "homepage": "https://github.com/yourusername/persian-legal-ai-training-system#readme",
   "devDependencies": {
-    "concurrently": "^8.2.0"
+    "@types/lodash": "^4.14.202",
+    "@types/node": "^24.3.1",
+    "@types/react": "^18.2.37",
+    "@types/react-dom": "^18.2.15",
+    "@typescript-eslint/eslint-plugin": "^6.10.0",
+    "@typescript-eslint/parser": "^6.10.0",
+    "@vitejs/plugin-react": "^4.1.1",
+    "autoprefixer": "^10.4.16",
+    "eslint": "^8.53.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.4",
+    "postcss": "^8.4.31",
+    "tailwindcss": "^3.3.5",
+    "typescript": "^5.2.2",
+    "vite": "^4.5.0"
   },
-  "dependencies": {}
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
 }
