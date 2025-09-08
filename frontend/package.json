@@ -18,6 +18,8 @@
     "test:coverage": "vitest --coverage"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.87.1",
+    "@tanstack/react-query-devtools": "^5.87.1",
     "axios": "^1.4.0",
     "clsx": "^2.0.0",
     "lucide-react": "^0.263.1",

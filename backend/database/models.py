@@ -233,7 +233,7 @@ class LegalDocument(Base):
     quality_score = Column(Float)
     
     # Metadata
-    metadata = Column(JSON)
+    document_metadata = Column(JSON)
     processed_at = Column(DateTime, default=datetime.utcnow)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     
@@ -250,7 +250,7 @@ class LegalDocument(Base):
             'language_confidence': self.language_confidence,
             'legal_relevance': self.legal_relevance,
             'quality_score': self.quality_score,
-            'metadata': self.metadata,
+            'metadata': self.document_metadata,
             'processed_at': self.processed_at.isoformat() if self.processed_at else None,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
