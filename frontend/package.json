@@ -1,66 +1,46 @@
 {
-  "name": "persian-legal-ai-frontend",
+  "name": "iranian-legal-archive",
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Frontend for Persian Legal AI Training System - React + TypeScript + Vite",
-  "homepage": "https://<USERNAME>.github.io/<REPO-NAME>",
+  "description": "Persian Legal Document Archive System with AI Classification and Web Scraping",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "start": "vite preview --port 3000 --host",
+    "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
-    "deploy": "gh-pages -d dist",
-    "type-check": "tsc --noEmit",
-    "test": "vitest",
-    "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage"
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@tanstack/react-query": "^5.87.1",
-    "@tanstack/react-query-devtools": "^5.87.1",
-    "axios": "^1.4.0",
+    "@tanstack/react-query": "^5.8.4",
+    "@tanstack/react-query-devtools": "^5.8.4",
+    "axios": "^1.6.1",
     "clsx": "^2.0.0",
-    "lucide-react": "^0.263.1",
+    "lodash": "^4.17.21",
+    "lucide-react": "^0.294.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.8.0",
-    "recharts": "^2.5.0",
-    "tailwind-merge": "^1.14.0"
+    "tailwind-merge": "^2.0.0"
   },
   "devDependencies": {
-    "@types/react": "^18.2.15",
-    "@types/react-dom": "^18.2.7",
-    "@typescript-eslint/eslint-plugin": "^6.0.0",
-    "@typescript-eslint/parser": "^6.0.0",
-    "@vitejs/plugin-react": "^4.0.3",
-    "@vitest/ui": "^0.34.0",
-    "autoprefixer": "^10.4.14",
-    "eslint": "^8.45.0",
+    "@types/lodash": "^4.14.202",
+    "@types/node": "^24.3.1",
+    "@types/react": "^18.2.37",
+    "@types/react-dom": "^18.2.15",
+    "@typescript-eslint/eslint-plugin": "^6.10.0",
+    "@typescript-eslint/parser": "^6.10.0",
+    "@vitejs/plugin-react": "^4.1.1",
+    "autoprefixer": "^10.4.16",
+    "eslint": "^8.53.0",
     "eslint-plugin-react-hooks": "^4.6.0",
-    "eslint-plugin-react-refresh": "^0.4.3",
-    "gh-pages": "^6.3.0",
-    "postcss": "^8.4.24",
-    "tailwindcss": "^3.3.0",
-    "typescript": "^5.0.2",
-    "vite": "^4.4.5",
-    "vitest": "^0.34.0"
+    "eslint-plugin-react-refresh": "^0.4.4",
+    "postcss": "^8.4.31",
+    "tailwindcss": "^3.3.5",
+    "typescript": "^5.2.2",
+    "vite": "^4.5.0"
   },
   "engines": {
-    "node": ">=18.17.0",
+    "node": ">=18.0.0",
     "npm": ">=9.0.0"
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
   }
 }
