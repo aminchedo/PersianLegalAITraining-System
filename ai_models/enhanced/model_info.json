@@ -1,0 +1,9 @@
+{
+  "model_name": "HooshvareLab/bert-base-parsbert-uncased",
+  "local_path": "/workspace/ai_models/enhanced/persian_bert",
+  "vocab_size": 22,
+  "verified_at": 1757331538.9999979,
+  "test_passed": true,
+  "is_mock": true,
+  "mock_created_at": 1757331538.999998
+}
