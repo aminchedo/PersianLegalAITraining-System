@@ -7,6 +7,8 @@ import './App.css';
 // Persian UI Components
 import PersianLayout from './components/layout/PersianLayout';
 import ErrorBoundary from './components/ErrorBoundary';
+import PerformanceMonitor from './components/PerformanceMonitor';
+import PersianLoader from './components/PersianLoader';
 
 // Lazy load pages for better performance
 const HomePage = lazy(() => import('./pages/HomePage'));
@@ -36,13 +38,16 @@ function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <Router>
-          <div className="App font-vazir" dir="rtl" lang="fa">
+          <div className="App font-persian" dir="rtl" lang="fa">
             <PersianLayout>
               <Suspense fallback={
-                <div className="flex items-center justify-center min-h-screen">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                  <span className="mr-3 text-gray-600">در حال بارگذاری...</span>
-                </div>
+                <PersianLoader
+                  type="brain"
+                  size="lg"
+                  message="بارگذاری سیستم هوش مصنوعی حقوقی فارسی..."
+                  color="primary"
+                  fullScreen
+                />
               }>
                 <Routes>
                   <Route path="/" element={<HomePage />} />
@@ -53,6 +58,18 @@ function App() {
                 </Routes>
               </Suspense>
             </PersianLayout>
+            
+            {/* Performance Monitor (Development/Debug) */}
+            {process.env.NODE_ENV === 'development' && (
+              <PerformanceMonitor 
+                enabled={true} 
+                showDetails={true}
+                onMetricsUpdate={(metrics) => {
+                  // Log performance metrics in development
+                  console.log('📊 Performance Metrics:', metrics);
+                }}
+              />
+            )}
           </div>
         </Router>
         <ReactQueryDevtools initialIsOpen={false} />
