@@ -1,10 +1,15 @@
 {
   "version": 2,
-  "buildCommand": "cd frontend && npm run build",
-  "outputDirectory": "frontend/.next",
-  "installCommand": "cd frontend && npm install",
-  "devCommand": "cd frontend && npm run dev",
+  "buildCommand": "cd persian-legal-ai-frontend && npm run build",
+  "outputDirectory": "persian-legal-ai-frontend/.next",
+  "installCommand": "cd persian-legal-ai-frontend && npm install",
+  "devCommand": "cd persian-legal-ai-frontend && npm run dev",
   "framework": "nextjs",
+  "functions": {
+    "pages/api/**/*.ts": {
+      "runtime": "nodejs18.x"
+    }
+  },
   "rewrites": [
     {
       "source": "/api/(.*)",
