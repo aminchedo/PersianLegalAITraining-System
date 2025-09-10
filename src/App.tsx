@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { Search, FileText, BarChart3, Settings, BookOpen } from 'lucide-react';
+import { Search, FileText, BarChart3, Settings, BookOpen, Server } from 'lucide-react';
 import SearchInterface from './components/SearchInterface';
 import ScrapingStatus from './components/ScrapingStatus';
 import DocumentViewer from './components/DocumentViewer';
 import Analytics from './components/Analytics';
+import DeploymentMonitor from './components/DeploymentMonitor';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -17,7 +18,7 @@ const queryClient = new QueryClient({
   },
 });
 
-type TabType = 'search' | 'scraping' | 'analytics' | 'settings';
+type TabType = 'search' | 'scraping' | 'analytics' | 'deployment' | 'settings';
 
 function App() {
   const [activeTab, setActiveTab] = useState<TabType>('search');
@@ -27,6 +28,7 @@ function App() {
     { id: 'search' as TabType, name: 'جستجو', icon: Search },
     { id: 'scraping' as TabType, name: 'جمع‌آوری', icon: FileText },
     { id: 'analytics' as TabType, name: 'تحلیل', icon: BarChart3 },
+    { id: 'deployment' as TabType, name: 'استقرار', icon: Server },
     { id: 'settings' as TabType, name: 'تنظیمات', icon: Settings },
   ];
 
@@ -43,6 +45,8 @@ function App() {
         return <ScrapingStatus />;
       case 'analytics':
         return <Analytics />;
+      case 'deployment':
+        return <DeploymentMonitor />;
       case 'settings':
         return <div className="p-6">تنظیمات در حال توسعه...</div>;
       default:

@@ -16,6 +16,9 @@ from config.database import get_database, test_connection
 from database.migrations import run_migrations, get_database_health
 from ai_classifier import classifier
 
+# Import API routers for integrated functionality
+from api.system_endpoints import router as system_router
+
 # Initialize FastAPI app
 app = FastAPI(
     title="Persian Legal AI System",
@@ -33,6 +36,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include routers for integrated functionality
+app.include_router(system_router)
 
 # Pydantic models
 class TextClassificationRequest(BaseModel):

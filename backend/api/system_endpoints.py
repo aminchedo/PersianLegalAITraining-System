@@ -292,3 +292,48 @@ async def get_system_resources():
     except Exception as e:
         logger.error(f"Failed to get system resources: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# ============================================================================
+# DEPLOYMENT ENDPOINTS - Integrated with existing system architecture
+# ============================================================================
+
+@router.get("/deployment/health")
+async def get_deployment_health():
+    """Get deployment health status - extends existing health endpoint"""
+    try:
+        from ..services.deployment_service import deployment_service
+        return await deployment_service.check_deployment_health()
+    except Exception as e:
+        logger.error(f"Failed to get deployment health: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/deployment/status")
+async def get_deployment_status():
+    """Get comprehensive deployment status"""
+    try:
+        from ..services.deployment_service import deployment_service
+        status = await deployment_service.get_deployment_status()
+        return status.dict()
+    except Exception as e:
+        logger.error(f"Failed to get deployment status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/deployment/validate")
+async def validate_deployment_configuration():
+    """Validate deployment configuration files"""
+    try:
+        from ..services.deployment_service import deployment_service
+        return await deployment_service.validate_deployment_configuration()
+    except Exception as e:
+        logger.error(f"Failed to validate deployment configuration: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/deployment/recommendations")
+async def get_deployment_recommendations():
+    """Get detailed deployment recommendations"""
+    try:
+        from ..services.deployment_service import deployment_service
+        return await deployment_service.get_deployment_recommendations_detailed()
+    except Exception as e:
+        logger.error(f"Failed to get deployment recommendations: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
