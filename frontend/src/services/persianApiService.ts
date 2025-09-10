@@ -5,7 +5,11 @@
 
 import axios, { AxiosResponse } from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const API_BASE = import.meta.env.VITE_API_URL || (
+  typeof window !== 'undefined' && window.location.hostname !== 'localhost'
+    ? '/api'  // Use relative path in production
+    : 'http://localhost:8000/api'  // Use localhost in development
+);
 
 export interface PersianDocument {
   id: number;
@@ -193,10 +197,87 @@ class PersianApiService {
         return response;
       },
       (error) => {
+        // Handle API unavailability gracefully
+        if (error.code === 'ECONNREFUSED' || error.code === 'ERR_NETWORK' || error.response?.status === 404) {
+          console.warn('🚧 Backend API unavailable - using fallback data');
+          return this.handleApiUnavailable(error);
+        }
         console.error('❌ API Response Error:', error);
         return Promise.reject(this.handleError(error));
       }
     );
+  }
+
+  private handleApiUnavailable(error: any): Promise<any> {
+    // Return mock data based on the endpoint
+    const url = error.config?.url || '';
+    
+    if (url.includes('/system/health')) {
+      return Promise.resolve({
+        data: {
+          status: 'maintenance',
+          timestamp: new Date().toISOString(),
+          components: {
+            database: 'unknown',
+            ai_models: 'unavailable',
+            gpu: 'unknown',
+            memory: 'unknown'
+          },
+          system_info: {
+            message: 'Backend API is currently unavailable due to missing dependencies'
+          }
+        }
+      });
+    }
+    
+    if (url.includes('/system/status')) {
+      return Promise.resolve({
+        data: {
+          system_status: {
+            database: { status: 'unknown', last_check: new Date().toISOString() },
+            ai_models: { status: 'unavailable', last_check: new Date().toISOString() },
+            training: { active_sessions: 0, total_sessions: 0 },
+            scraping: { is_running: false, documents_scraped: 0 }
+          },
+          database_stats: {
+            total_documents: 0,
+            by_category: {},
+            by_type: {},
+            by_status: { 'maintenance': 1 },
+            timestamp: new Date().toISOString()
+          },
+          timestamp: new Date().toISOString()
+        }
+      });
+    }
+
+    // For other endpoints, return appropriate empty/error responses
+    return Promise.reject({
+      message: 'Backend API is currently unavailable',
+      status: 503,
+      isMaintenanceMode: true
+    });
+  }
+
+  private handleError(error: any): any {
+    if (error.response) {
+      return {
+        message: error.response.data?.detail || error.response.data?.message || 'API request failed',
+        status: error.response.status,
+        data: error.response.data
+      };
+    } else if (error.request) {
+      return {
+        message: 'Network error - unable to reach server',
+        status: 0,
+        isNetworkError: true
+      };
+    } else {
+      return {
+        message: error.message || 'Unknown error occurred',
+        status: 0
+      };
+    }
   }
 
   // System endpoints
