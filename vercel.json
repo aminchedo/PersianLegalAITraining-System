@@ -1,21 +1,19 @@
 {
   "version": 2,
+  "builds": [
+    {
+      "src": "persian-legal-ai-frontend/package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "/persian-legal-ai-frontend/$1" }
+  ],
   "buildCommand": "cd persian-legal-ai-frontend && npm run build",
   "outputDirectory": "persian-legal-ai-frontend/.next",
   "installCommand": "cd persian-legal-ai-frontend && npm install",
   "devCommand": "cd persian-legal-ai-frontend && npm run dev",
   "framework": "nextjs",
-  "functions": {
-    "pages/api/**/*.ts": {
-      "runtime": "nodejs18.x"
-    }
-  },
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api-unavailable.html"
-    }
-  ],
   "headers": [
     {
       "source": "/(.*)",
@@ -31,20 +29,20 @@
         {
           "key": "X-XSS-Protection",
           "value": "1; mode=block"
-        }
-      ]
-    },
-    {
-      "source": "/api-unavailable.html",
-      "headers": [
+        },
         {
-          "key": "Cache-Control",
-          "value": "public, max-age=300"
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Content-Language",
+          "value": "fa"
         }
       ]
     }
   ],
   "env": {
-    "NODE_ENV": "production"
+    "NODE_ENV": "production",
+    "NEXT_PUBLIC_API_URL": "https://your-backend-url.com"
   }
 }

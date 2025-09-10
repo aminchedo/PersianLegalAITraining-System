@@ -9,6 +9,9 @@ const nextConfig = {
     locales: ['fa'],
     defaultLocale: 'fa',
   },
+  env: {
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+  },
   async headers() {
     return [
       {
@@ -29,6 +32,10 @@ const nextConfig = {
           {
             key: 'Referrer-Policy',
             value: 'strict-origin-when-cross-origin',
+          },
+          {
+            key: 'Content-Language',
+            value: 'fa',
           },
         ],
       },
