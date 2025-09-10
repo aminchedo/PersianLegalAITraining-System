@@ -22,7 +22,7 @@ const PersianLayout: React.FC<PersianLayoutProps> = ({ children }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 font-vazir">
+    <div className="min-h-screen bg-gray-50 font-vazir" dir="rtl" lang="fa">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
@@ -88,9 +88,12 @@ const PersianLayout: React.FC<PersianLayoutProps> = ({ children }) => {
             </button>
             
             <div className="flex items-center space-x-4 space-x-reverse">
-              <span className="text-sm text-gray-600">
-                سیستم آموزش هوش مصنوعی حقوقی فارسی
-              </span>
+              <div className="flex items-center space-x-2 space-x-reverse">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <span className="text-sm text-gray-600">
+                  سیستم آموزش هوش مصنوعی حقوقی فارسی
+                </span>
+              </div>
             </div>
           </div>
         </header>

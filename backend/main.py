@@ -17,6 +17,9 @@ from data.persian_legal_loader import PersianLegalDataLoader
 from training.dora_trainer import DoRATrainingPipeline
 from monitoring.performance_monitor import SystemPerformanceMonitor
 
+# Import API routers
+from api.real_data_endpoints import router as real_data_router
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -98,6 +101,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include API routers
+app.include_router(real_data_router)
 
 # ===== SYSTEM ENDPOINTS =====
 
