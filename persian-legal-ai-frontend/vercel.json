@@ -32,7 +32,10 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "http://localhost:8000/api/$1"
+      "destination": "/api-unavailable.html"
     }
-  ]
+  ],
+  "env": {
+    "NEXT_PUBLIC_API_URL": "@next_public_api_url"
+  }
 }

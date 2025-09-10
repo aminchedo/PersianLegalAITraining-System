@@ -5,15 +5,15 @@
   "devFiles": [],
   "ampDevFiles": [],
   "lowPriorityFiles": [
-    "static/KwfY15w6D1US8R5P7qhka/_buildManifest.js",
-    "static/KwfY15w6D1US8R5P7qhka/_ssgManifest.js"
+    "static/68Ay-Eqpi60gs4Zg2GwNy/_buildManifest.js",
+    "static/68Ay-Eqpi60gs4Zg2GwNy/_ssgManifest.js"
   ],
   "rootMainFiles": [],
   "pages": {
     "/": [
       "static/chunks/webpack-0b5d8249fb15f5f3.js",
       "static/chunks/framework-64ad27b21261a9ce.js",
-      "static/chunks/main-0b76dfaa3cd9ea44.js",
+      "static/chunks/main-acafdde9085dad2b.js",
       "static/chunks/660-152a61f041bb4615.js",
       "static/chunks/992-c9b639709ed87ca2.js",
       "static/chunks/pages/index-678446396c3b92b8.js"
@@ -21,20 +21,20 @@
     "/_app": [
       "static/chunks/webpack-0b5d8249fb15f5f3.js",
       "static/chunks/framework-64ad27b21261a9ce.js",
-      "static/chunks/main-0b76dfaa3cd9ea44.js",
+      "static/chunks/main-acafdde9085dad2b.js",
       "static/css/001caa6f48ba3c32.css",
       "static/chunks/pages/_app-c40111e8ef678c2e.js"
     ],
     "/_error": [
       "static/chunks/webpack-0b5d8249fb15f5f3.js",
       "static/chunks/framework-64ad27b21261a9ce.js",
-      "static/chunks/main-0b76dfaa3cd9ea44.js",
+      "static/chunks/main-acafdde9085dad2b.js",
       "static/chunks/pages/_error-7a92967bea80186d.js"
     ],
     "/classification": [
       "static/chunks/webpack-0b5d8249fb15f5f3.js",
       "static/chunks/framework-64ad27b21261a9ce.js",
-      "static/chunks/main-0b76dfaa3cd9ea44.js",
+      "static/chunks/main-acafdde9085dad2b.js",
       "static/chunks/660-152a61f041bb4615.js",
       "static/chunks/992-c9b639709ed87ca2.js",
       "static/chunks/pages/classification-989ad9dc89646914.js"
@@ -42,7 +42,7 @@
     "/documents": [
       "static/chunks/webpack-0b5d8249fb15f5f3.js",
       "static/chunks/framework-64ad27b21261a9ce.js",
-      "static/chunks/main-0b76dfaa3cd9ea44.js",
+      "static/chunks/main-acafdde9085dad2b.js",
       "static/chunks/660-152a61f041bb4615.js",
       "static/chunks/992-c9b639709ed87ca2.js",
       "static/chunks/pages/documents-789461bb9e993afd.js"
@@ -50,7 +50,7 @@
     "/training": [
       "static/chunks/webpack-0b5d8249fb15f5f3.js",
       "static/chunks/framework-64ad27b21261a9ce.js",
-      "static/chunks/main-0b76dfaa3cd9ea44.js",
+      "static/chunks/main-acafdde9085dad2b.js",
       "static/chunks/660-152a61f041bb4615.js",
       "static/chunks/992-c9b639709ed87ca2.js",
       "static/chunks/pages/training-2e43ce97071f4f33.js"
