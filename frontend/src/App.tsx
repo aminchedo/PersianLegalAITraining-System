@@ -11,6 +11,8 @@ import DocumentsPage from './pages/DocumentsPage';
 import TrainingPage from './pages/TrainingPage';
 import ClassificationPage from './pages/ClassificationPage';
 import SystemPage from './pages/SystemPage';
+import { BoltErrorBoundary } from './components/bolt/BoltErrorBoundary';
+
 
 // Create query client with Persian-optimized settings
 const queryClient = new QueryClient({
