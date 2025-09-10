@@ -9,6 +9,17 @@ import {
 } from 'lucide-react';
 import { useRealTeamData, useRealModelData, useRealSystemMetrics, useRealSystemStats } from '../hooks/useRealData';
 import { RealTeamMember, RealModelTraining, RealSystemMetrics } from '../types/realData';
+// Bolt Components
+import BoltAnalyticsPage from './bolt/pages/analytics-page';
+import BoltDataPage from './bolt/pages/data-page';
+import BoltModelsPage from './bolt/pages/models-page';
+import BoltMonitoringPage from './bolt/pages/monitoring-page';
+import BoltSettingsPage from './bolt/pages/settings-page';
+import BoltLogsPage from './bolt/pages/logs-page';
+import BoltTeam from './bolt/components/team';
+import { BoltProvider } from '../services/boltContext';
+import { boltApi } from '../api/boltApi';
+
 
 // Loading component
 const LoadingSpinner: React.FC<{ message?: string }> = ({ message = "Loading..." }) => (
@@ -122,6 +133,8 @@ const CompletePersianAIDashboard: React.FC = () => {
         {navigationItems.map((item) => {
           const Icon = item.icon;
           return (
+    <BoltProvider>
+
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
@@ -134,7 +147,9 @@ const CompletePersianAIDashboard: React.FC = () => {
                 <span className="ml-3">{item.label}</span>
               )}
             </button>
-          );
+          
+    </BoltProvider>
+);
         })}
       </nav>
     </div>
@@ -344,6 +359,22 @@ const CompletePersianAIDashboard: React.FC = () => {
              </div>}
           </div>
         );
+      
+      // Bolt Routes
+      case 'bolt-analytics':
+        return <BoltAnalyticsPage />;
+      case 'bolt-data':
+        return <BoltDataPage />;
+      case 'bolt-models':
+        return <BoltModelsPage />;
+      case 'bolt-monitoring':
+        return <BoltMonitoringPage />;
+      case 'bolt-settings':
+        return <BoltSettingsPage />;
+      case 'bolt-logs':
+        return <BoltLogsPage />;
+      case 'bolt-team':
+        return <BoltTeam />;
       default:
         return (
           <div className="p-6">
