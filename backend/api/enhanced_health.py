@@ -8,6 +8,7 @@ import psutil
 import os
 import platform
 import sys
+import time
 import asyncio
 from typing import Dict, List, Optional, Any
 from datetime import datetime
@@ -252,7 +253,7 @@ def get_system_metrics() -> Dict[str, Any]:
         logger.error(f"Error getting system metrics: {e}")
         return {"error": str(e)}
 
-def get_services_status() -> Dict[str, str]:
+async def get_services_status() -> Dict[str, str]:
     """Get status of various services"""
     services = {}
     
@@ -280,13 +281,14 @@ def get_services_status() -> Dict[str, str]:
     
     # Check Redis (if configured)
     try:
-        import redis
-        # This would need Redis connection details
-        services["redis"] = "unknown"
+        from config.redis_config import redis_health_check
+        redis_health = await redis_health_check()
+        services["redis"] = redis_health.get("status", "unknown")
     except ImportError:
         services["redis"] = "not_installed"
-    except Exception:
-        services["redis"] = "unknown"
+    except Exception as e:
+        logger.error(f"Redis health check failed: {e}")
+        services["redis"] = "unhealthy"
     
     return services
 
@@ -368,7 +370,7 @@ async def get_enhanced_health(current_user: Optional[TokenData] = Depends(option
         gpu_info = get_gpu_info()
         database_health = await get_database_health()
         system_metrics = get_system_metrics()
-        services_status = get_services_status()
+        services_status = await get_services_status()
         performance_metrics = get_performance_metrics()
         security_status = get_security_status(current_user)
         

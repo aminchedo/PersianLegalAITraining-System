@@ -12,7 +12,8 @@ import uvicorn
 from datetime import datetime
 
 # Import local modules
-from config.database import get_database, init_database, test_connection
+from config.database import get_database, test_connection
+from database.migrations import run_migrations, get_database_health
 from ai_classifier import classifier
 
 # Initialize FastAPI app
@@ -50,21 +51,35 @@ class DocumentStats(BaseModel):
     total_size: str
     last_updated: datetime
 
-# Initialize database on startup
+# Initialize database and Redis on startup
 @app.on_event("startup")
 async def startup_event():
-    """Initialize database and AI models on startup"""
+    """Initialize database, Redis, and AI models on startup"""
     try:
-        await init_database()
-        print("✅ Database initialized successfully")
+        migration_success = await run_migrations()
+        if migration_success:
+            print("✅ Database migrations completed successfully")
+        else:
+            print("❌ Database migration failed")
     except Exception as e:
         print(f"❌ Database initialization failed: {e}")
+    
+    try:
+        from config.redis_config import init_redis
+        redis_ok = await init_redis()
+        if redis_ok:
+            print("✅ Redis initialized successfully")
+        else:
+            print("⚠️ Redis initialization failed - continuing without cache")
+    except Exception as e:
+        print(f"⚠️ Redis initialization failed: {e} - continuing without cache")
 
 # Health check endpoint
 @app.get("/api/system/health", response_model=SystemHealthResponse)
 async def health_check():
     """System health check endpoint"""
-    db_connected = await test_connection()
+    db_health = await get_database_health()
+    db_connected = db_health.get("status") == "healthy"
     ai_loaded = classifier.model is not None
     
     return SystemHealthResponse(
@@ -74,6 +89,21 @@ async def health_check():
         ai_model_loaded=ai_loaded,
         version="2.0.0"
     )
+
+# Database stats endpoint
+@app.get("/api/system/database/stats")
+async def database_stats():
+    """Get database statistics"""
+    try:
+        from database.migrations import get_database_stats
+        stats = await get_database_stats()
+        return {
+            "status": "success",
+            "data": stats,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get database stats: {str(e)}")
 
 # Root endpoint
 @app.get("/")
@@ -86,22 +116,48 @@ async def root():
         "docs": "/docs"
     }
 
-# AI Classification endpoint
+# AI Classification endpoint with Redis caching
 @app.post("/api/ai/classify")
 async def classify_text(request: TextClassificationRequest):
-    """Classify Persian legal text"""
+    """Classify Persian legal text with Redis caching"""
     try:
+        import hashlib
+        
+        # Create cache key from text hash
+        text_hash = hashlib.md5(request.text.encode('utf-8')).hexdigest()
+        
+        # Try to get from cache first
+        try:
+            from config.redis_config import cache
+            cached_result = await cache.get_classification_result(text_hash)
+            if cached_result:
+                print(f"✅ Cache hit for classification: {text_hash[:8]}...")
+                cached_result["cached"] = True
+                return cached_result
+        except Exception as cache_error:
+            print(f"⚠️ Cache read error: {cache_error}")
+        
+        # If not in cache, perform classification
         result = await classifier.classify_async(request.text)
         
         response = {
             "text": request.text[:100] + "..." if len(request.text) > 100 else request.text,
             "classification": result,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
+            "cached": False
         }
         
         if request.include_confidence:
             response["confidence"] = max(result.values())
             response["predicted_class"] = max(result, key=result.get)
+        
+        # Cache the result
+        try:
+            from config.redis_config import cache
+            await cache.cache_classification_result(text_hash, response, ttl=3600)
+            print(f"✅ Cached classification result: {text_hash[:8]}...")
+        except Exception as cache_error:
+            print(f"⚠️ Cache write error: {cache_error}")
         
         return response
         
@@ -183,6 +239,17 @@ async def start_training(dataset_name: str):
         "status": "started",
         "timestamp": datetime.now().isoformat()
     }
+
+# Shutdown event to cleanup resources
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup resources on shutdown"""
+    try:
+        from config.redis_config import close_redis
+        await close_redis()
+        print("✅ Redis connection closed")
+    except Exception as e:
+        print(f"⚠️ Error closing Redis: {e}")
 
 if __name__ == "__main__":
     uvicorn.run(
