@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 
 // Types
 export interface Model {
@@ -121,43 +121,75 @@ export interface PersianAIProviderProps {
   children: ReactNode;
 }
 
-// Mock data and functions for build compatibility
-const mockModels: Model[] = [
-  {
-    id: '1',
-    name: 'Persian Legal Classifier',
-    type: 'classification',
-    status: 'deployed',
-    accuracy: 0.92,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    parameters: {
-      epochs: 10,
-      batch_size: 32,
-      learning_rate: 0.001,
-    }
-  }
-];
+export function PersianAIProvider({ children }: PersianAIProviderProps) {
+  const [state, dispatch] = useReducer(persianAIReducer, initialState);
 
-const mockMetrics: SystemMetrics = {
-  cpu_usage: 45.2,
-  memory_usage: 67.8,
-  disk_usage: 23.1,
-  gpu_usage: 78.5,
-};
+  useEffect(() => {
+    // Initialize connection and load initial data
+    const initializeData = async () => {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'connecting' });
+
+      try {
+        // Simulate API calls - replace with actual API calls
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Mock data - replace with real API calls
+        const mockModels: Model[] = [
+          {
+            id: '1',
+            name: 'Persian Legal Classifier',
+            type: 'classification',
+            status: 'deployed',
+            accuracy: 0.92,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            parameters: {
+              epochs: 10,
+              batch_size: 32,
+              learning_rate: 0.001,
+            }
+          }
+        ];
+
+        const mockSessions: TrainingSession[] = [];
+
+        const mockMetrics: SystemMetrics = {
+          cpu_usage: 45.2,
+          memory_usage: 67.8,
+          disk_usage: 23.1,
+          gpu_usage: 78.5,
+        };
+
+        dispatch({ type: 'SET_MODELS', payload: mockModels });
+        dispatch({ type: 'SET_TRAINING_SESSIONS', payload: mockSessions });
+        dispatch({ type: 'SET_SYSTEM_METRICS', payload: mockMetrics });
+        dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'connected' });
+
+      } catch (error) {
+        dispatch({ type: 'SET_ERROR', payload: 'خطا در بارگذاری اطلاعات' });
+        dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'disconnected' });
+      } finally {
+        dispatch({ type: 'SET_LOADING', payload: false });
+      }
+    };
+
+    initializeData();
+  }, []);
+
+  return (
+    <PersianAIContext.Provider value={{ state, dispatch }}>
+      {children}
+    </PersianAIContext.Provider>
+  );
+}
 
 export function usePersianAI() {
-  // Simple hook implementation for build compatibility
-  const [state] = useReducer(persianAIReducer, {
-    ...initialState,
-    models: mockModels,
-    systemMetrics: mockMetrics,
-    connectionStatus: 'connected' as const,
-  });
-
-  const dispatch = () => {}; // Placeholder
-
-  return { state, dispatch };
+  const context = useContext(PersianAIContext);
+  if (!context) {
+    throw new Error('usePersianAI must be used within PersianAIProvider');
+  }
+  return context;
 }
 
 // Helper hooks
@@ -183,16 +215,18 @@ export function useConnectionStatus() {
 
 // Action creators
 export function useTrainingActions() {
+  const { dispatch } = usePersianAI();
+
   const startTraining = (session: TrainingSession) => {
-    console.log('Start training:', session);
+    dispatch({ type: 'ADD_TRAINING_SESSION', payload: session });
   };
 
   const updateTraining = (id: string, updates: Partial<TrainingSession>) => {
-    console.log('Update training:', id, updates);
+    dispatch({ type: 'UPDATE_TRAINING_SESSION', payload: { id, updates } });
   };
 
   const stopTraining = (id: string) => {
-    console.log('Stop training:', id);
+    dispatch({ type: 'REMOVE_TRAINING_SESSION', payload: id });
   };
 
   return {
@@ -203,16 +237,18 @@ export function useTrainingActions() {
 }
 
 export function useSystemActions() {
+  const { dispatch } = usePersianAI();
+
   const updateMetrics = (metrics: SystemMetrics) => {
-    console.log('Update metrics:', metrics);
+    dispatch({ type: 'SET_SYSTEM_METRICS', payload: metrics });
   };
 
   const setError = (error: string | null) => {
-    console.log('Set error:', error);
+    dispatch({ type: 'SET_ERROR', payload: error });
   };
 
   const setLoading = (loading: boolean) => {
-    console.log('Set loading:', loading);
+    dispatch({ type: 'SET_LOADING', payload: loading });
   };
 
   return {
