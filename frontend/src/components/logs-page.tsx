@@ -5,16 +5,16 @@ import {
   Eye, EyeOff, Settings, Play, Pause, Square, Copy,
   Calendar, FileText, Server, Database, Activity, Zap
 } from 'lucide-react';
-import { useAppContext } from './Router';
+import { useAppContext } from './router';
 
 const LogsPage = () => {
   const { systemLogs, setSystemLogs, autoRefresh } = useAppContext();
-  const [filteredLogs, setFilteredLogs] = useState([]);
+  const [filteredLogs, setFilteredLogs] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [levelFilter, setLevelFilter] = useState('all');
   const [componentFilter, setComponentFilter] = useState('all');
   const [timeFilter, setTimeFilter] = useState('all');
-  const [selectedLogs, setSelectedLogs] = useState([]);
+  const [selectedLogs, setSelectedLogs] = useState<number[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [realTimeLogs, setRealTimeLogs] = useState(true);
   const [maxLogs, setMaxLogs] = useState(1000);

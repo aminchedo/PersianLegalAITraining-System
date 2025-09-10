@@ -1,21 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Brain, Database, Activity, BarChart3, FileText, Terminal, Users, Settings, Home } from 'lucide-react';
 import { useRealTeamData, useRealModelData, useRealSystemStats, useApiConnection } from '../hooks/useRealData';
-
-// Context for global state management
-interface AppContextType {
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
-  sidebarCollapsed: boolean;
-  setSidebarCollapsed: (collapsed: boolean) => void;
-  autoRefresh: boolean;
-  setAutoRefresh: (refresh: boolean) => void;
-  refreshInterval: number;
-  setRefreshInterval: (interval: number) => void;
-  isConnected: boolean | null;
-  connectionTesting: boolean;
-  testConnection: () => void;
-}
+import { AppContextType, ModelTraining, TeamMember, LogEntry } from '../types/dashboard';
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -33,9 +19,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [refreshInterval, setRefreshInterval] = useState(3000);
+  const [models, setModels] = useState<ModelTraining[]>([]);
+  const [systemLogs, setSystemLogs] = useState<LogEntry[]>([]);
   
   // Real data hooks
   const { isConnected, testing: connectionTesting, testConnection } = useApiConnection();
+  const { data: teamData } = useRealTeamData();
+  const { data: modelData } = useRealModelData();
+  const { data: systemStats } = useRealSystemStats();
+  
+  // Mock real-time data for now
+  const [realTimeData, setRealTimeData] = useState<any[]>([]);
   
   const contextValue: AppContextType = {
     activeTab,
@@ -48,7 +42,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setRefreshInterval,
     isConnected,
     connectionTesting,
-    testConnection
+    testConnection,
+    models: modelData || models,
+    setModels,
+    realTimeData: systemStats?.metrics || realTimeData,
+    teamMembers: teamData?.members || [],
+    systemLogs,
+    setSystemLogs
   };
 
   return (

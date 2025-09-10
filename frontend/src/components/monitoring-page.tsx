@@ -3,17 +3,18 @@ import {
   Monitor, Cpu, HardDrive, Thermometer, Power, Network, Activity, 
   AlertTriangle, CheckCircle, Clock, Zap, Server, BarChart3,
   RefreshCw, Settings, Download, Eye, EyeOff, Maximize2, X,
-  TrendingUp, TrendingDown, Wifi, Globe, Database, Memory
+  TrendingUp, TrendingDown, Wifi, Globe, Database
 } from 'lucide-react';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadialBarChart, RadialBar, PieChart, Pie, Cell } from 'recharts';
 import { useAppContext } from './router';
+import { SystemMetric } from '../types/dashboard';
 
 const MonitoringPage = () => {
   const { realTimeData, autoRefresh, setAutoRefresh, refreshInterval } = useAppContext();
-  const [selectedMetric, setSelectedMetric] = useState(null);
+  const [selectedMetric, setSelectedMetric] = useState<SystemMetric | null>(null);
   const [alertsFilter, setAlertsFilter] = useState('all');
   const [timeRange, setTimeRange] = useState('1h');
-  const [fullScreenChart, setFullScreenChart] = useState(null);
+  const [fullScreenChart, setFullScreenChart] = useState<any>(null);
 
   // System health metrics
   const [systemMetrics, setSystemMetrics] = useState({
@@ -130,7 +131,7 @@ const MonitoringPage = () => {
   };
 
   // Alert severity configs
-  const getAlertConfig = (type, severity) => {
+  const getAlertConfig = (type: string, severity: string) => {
     const configs = {
       error: { color: 'text-red-700', bgColor: 'bg-red-100', icon: AlertTriangle },
       warning: { color: 'text-yellow-700', bgColor: 'bg-yellow-100', icon: AlertTriangle },
@@ -140,7 +141,7 @@ const MonitoringPage = () => {
   };
 
   // Service status configs
-  const getServiceConfig = (status) => {
+  const getServiceConfig = (status: string) => {
     const configs = {
       running: { color: 'text-green-700', bgColor: 'bg-green-100', icon: CheckCircle },
       stopped: { color: 'text-red-700', bgColor: 'bg-red-100', icon: X },

@@ -6,18 +6,19 @@ import {
   UserPlus, UserMinus, Key, Award, Target, BarChart3
 } from 'lucide-react';
 import { useAppContext } from './router';
+import { TeamMember, NewMember } from '../types/dashboard';
 
 const TeamPage = () => {
   const { teamMembers } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedMember, setSelectedMember] = useState(null);
+  const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [viewMode, setViewMode] = useState('grid');
   const [showPermissions, setShowPermissions] = useState(false);
 
-  const [newMember, setNewMember] = useState({
+  const [newMember, setNewMember] = useState<NewMember>({
     name: '',
     email: '',
     role: 'data-scientist',
@@ -191,7 +192,7 @@ const TeamPage = () => {
   });
 
   // Get status configuration
-  const getStatusConfig = (status) => {
+  const getStatusConfig = (status: string) => {
     const configs = {
       online: { color: 'text-green-700', bgColor: 'bg-green-100', dot: 'bg-green-500', label: 'آنلاین' },
       away: { color: 'text-yellow-700', bgColor: 'bg-yellow-100', dot: 'bg-yellow-500', label: 'غایب' },
@@ -202,7 +203,7 @@ const TeamPage = () => {
   };
 
   // Get role color
-  const getRoleColor = (role) => {
+  const getRoleColor = (role: string) => {
     const roleObj = roles.find(r => role.includes(r.label.split(' ')[0].toLowerCase()));
     return roleObj?.color || 'gray';
   };
@@ -238,7 +239,7 @@ const TeamPage = () => {
   };
 
   // Handle remove member
-  const handleRemoveMember = (memberId) => {
+  const handleRemoveMember = (memberId: any) => {
     setAllMembers(prev => prev.filter(member => member.id !== memberId));
   };
 

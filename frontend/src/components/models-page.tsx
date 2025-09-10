@@ -6,11 +6,12 @@ import {
   TrendingUp, TrendingDown, BarChart3, PieChart
 } from 'lucide-react';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RePieChart, Pie, Cell, BarChart, Bar } from 'recharts';
-import { useAppContext } from './Router';
+import { useAppContext } from './router';
+import { ModelTraining } from '../types/dashboard';
 
 const ModelsPage = () => {
   const { models, setModels, realTimeData } = useAppContext();
-  const [selectedModel, setSelectedModel] = useState(null);
+  const [selectedModel, setSelectedModel] = useState<ModelTraining | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [viewMode, setViewMode] = useState('grid'); // grid, list, detail
   const [filterStatus, setFilterStatus] = useState('all');
@@ -49,7 +50,7 @@ const ModelsPage = () => {
     });
 
   // Model action handlers
-  const handleModelAction = (action, modelId, config = null) => {
+  const handleModelAction = (action: string, modelId: any, config: any = null) => {
     setModels(prev => prev.map(model => {
       if (model.id === modelId) {
         switch (action) {
@@ -95,7 +96,7 @@ const ModelsPage = () => {
   };
 
   // Status colors and icons
-  const getStatusConfig = (status) => {
+  const getStatusConfig = (status: string) => {
     const configs = {
       training: { color: 'bg-blue-500', textColor: 'text-blue-700', bgColor: 'bg-blue-100', icon: Activity },
       completed: { color: 'bg-green-500', textColor: 'text-green-700', bgColor: 'bg-green-100', icon: CheckCircle },
@@ -105,7 +106,7 @@ const ModelsPage = () => {
     return configs[status] || configs.pending;
   };
 
-  const getStatusText = (status) => {
+  const getStatusText = (status: string) => {
     const texts = {
       training: 'در حال آموزش',
       completed: 'تکمیل شده',
@@ -116,7 +117,7 @@ const ModelsPage = () => {
   };
 
   // Model type configurations
-  const getModelTypeConfig = (type) => {
+  const getModelTypeConfig = (type: string) => {
     const configs = {
       'language-model': { label: 'مدل زبانی', color: 'purple', icon: Brain },
       'bert-model': { label: 'مدل BERT', color: 'blue', icon: Brain },
