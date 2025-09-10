@@ -1,0 +1,45 @@
+# Persian Legal AI Training System - Production Requirements
+# Generated: 2025-09-10
+
+# Web Framework & API
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+pydantic==2.11.7
+pydantic-settings==2.1.0
+
+# Database & Storage  
+aiosqlite==0.19.0
+sqlalchemy==2.0.43
+
+# AI/ML Core
+torch==2.8.0
+transformers==4.56.1
+tokenizers==0.22.0
+peft==0.17.1
+datasets==4.0.0
+accelerate==1.10.1
+numpy==2.3.3
+
+# Web Scraping
+aiohttp==3.12.15
+beautifulsoup4==4.13.5
+lxml==6.0.1
+requests==2.32.5
+
+# System Monitoring
+psutil==7.0.0
+structlog==25.4.0
+
+# Utilities
+python-dateutil==2.9.0.post0
+pytz==2025.2
+python-dotenv==1.1.1
+
+# Security
+passlib[bcrypt]>=1.7.4
+python-jose[cryptography]>=3.3.0
+
+# Additional Production Dependencies
+gunicorn>=21.2.0
+redis>=5.0.1
