@@ -1,0 +1,325 @@
+/* Persian Typography System */
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100;200;300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Estedad:wght@100;200;300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Dana:wght@200;300;400;500;600;700;800;900&display=swap');
+
+:root {
+  /* Persian Font Variables */
+  --font-primary: 'Vazirmatn', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  --font-secondary: 'Estedad', 'Vazirmatn', sans-serif;
+  --font-mono: 'Dana', 'Vazirmatn', monospace;
+  
+  /* Typography Scale */
+  --text-xs: 0.75rem;      /* 12px */
+  --text-sm: 0.875rem;     /* 14px */
+  --text-base: 1rem;       /* 16px */
+  --text-lg: 1.125rem;     /* 18px */
+  --text-xl: 1.25rem;      /* 20px */
+  --text-2xl: 1.5rem;      /* 24px */
+  --text-3xl: 1.875rem;    /* 30px */
+  --text-4xl: 2.25rem;     /* 36px */
+  --text-5xl: 3rem;        /* 48px */
+  
+  /* Line Heights */
+  --leading-tight: 1.25;
+  --leading-snug: 1.375;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+  --leading-loose: 2;
+  
+  /* Letter Spacing for Persian */
+  --tracking-tighter: -0.025em;
+  --tracking-tight: -0.0125em;
+  --tracking-normal: 0em;
+  --tracking-wide: 0.025em;
+  --tracking-wider: 0.05em;
+}
+
+/* Base Typography */
+html {
+  font-family: var(--font-primary);
+  direction: rtl;
+  text-align: right;
+}
+
+body {
+  font-family: var(--font-primary);
+  direction: rtl;
+  line-height: var(--leading-normal);
+  font-weight: 400;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Persian Text Classes */
+.text-persian-primary {
+  font-family: var(--font-primary);
+  font-weight: 400;
+  line-height: var(--leading-normal);
+}
+
+.text-persian-secondary {
+  font-family: var(--font-secondary);
+  font-weight: 400;
+  line-height: var(--leading-relaxed);
+}
+
+.text-persian-mono {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  line-height: var(--leading-normal);
+}
+
+/* Heading Styles */
+.heading-1 {
+  font-size: var(--text-4xl);
+  font-weight: 700;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+  margin-bottom: 1.5rem;
+}
+
+.heading-2 {
+  font-size: var(--text-3xl);
+  font-weight: 600;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+  margin-bottom: 1.25rem;
+}
+
+.heading-3 {
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  line-height: var(--leading-snug);
+  margin-bottom: 1rem;
+}
+
+.heading-4 {
+  font-size: var(--text-xl);
+  font-weight: 500;
+  line-height: var(--leading-snug);
+  margin-bottom: 0.875rem;
+}
+
+/* Persian Paragraph Styles */
+.paragraph-large {
+  font-size: var(--text-lg);
+  line-height: var(--leading-relaxed);
+  margin-bottom: 1.25rem;
+}
+
+.paragraph-normal {
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  margin-bottom: 1rem;
+}
+
+.paragraph-small {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  margin-bottom: 0.75rem;
+}
+
+/* Persian UI Text */
+.ui-text-large {
+  font-size: var(--text-lg);
+  font-weight: 500;
+  line-height: var(--leading-snug);
+}
+
+.ui-text-medium {
+  font-size: var(--text-base);
+  font-weight: 400;
+  line-height: var(--leading-normal);
+}
+
+.ui-text-small {
+  font-size: var(--text-sm);
+  font-weight: 400;
+  line-height: var(--leading-normal);
+}
+
+.ui-text-xs {
+  font-size: var(--text-xs);
+  font-weight: 400;
+  line-height: var(--leading-normal);
+}
+
+/* Button Typography */
+.btn-text-large {
+  font-size: var(--text-lg);
+  font-weight: 500;
+  letter-spacing: var(--tracking-wide);
+}
+
+.btn-text-medium {
+  font-size: var(--text-base);
+  font-weight: 500;
+  letter-spacing: var(--tracking-normal);
+}
+
+.btn-text-small {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  letter-spacing: var(--tracking-normal);
+}
+
+/* Caption and Meta Text */
+.caption-text {
+  font-size: var(--text-xs);
+  font-weight: 400;
+  line-height: var(--leading-normal);
+  color: #6B7280;
+}
+
+.meta-text {
+  font-size: var(--text-sm);
+  font-weight: 400;
+  line-height: var(--leading-normal);
+  color: #9CA3AF;
+}
+
+/* Code and Technical Text */
+.code-text {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  background-color: #F3F4F6;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+}
+
+/* Persian Number Styles */
+.persian-numbers {
+  font-feature-settings: 'lnum' 1;
+  font-variant-numeric: lining-nums;
+}
+
+.tabular-numbers {
+  font-feature-settings: 'tnum' 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* RTL Specific Adjustments */
+.text-right-adjusted {
+  text-align: right;
+  direction: rtl;
+}
+
+.text-left-adjusted {
+  text-align: left;
+  direction: ltr;
+}
+
+/* Persian Text Selection */
+::selection {
+  background-color: #3B82F6;
+  color: white;
+}
+
+::-moz-selection {
+  background-color: #3B82F6;
+  color: white;
+}
+
+/* Persian Form Typography */
+.form-label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  line-height: var(--leading-normal);
+  margin-bottom: 0.375rem;
+  display: block;
+}
+
+.form-input {
+  font-size: var(--text-base);
+  font-weight: 400;
+  line-height: var(--leading-normal);
+  font-family: var(--font-primary);
+}
+
+.form-help {
+  font-size: var(--text-xs);
+  font-weight: 400;
+  line-height: var(--leading-normal);
+  color: #6B7280;
+  margin-top: 0.25rem;
+}
+
+.form-error {
+  font-size: var(--text-xs);
+  font-weight: 400;
+  line-height: var(--leading-normal);
+  color: #DC2626;
+  margin-top: 0.25rem;
+}
+
+/* Status and Badge Typography */
+.status-text {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  line-height: var(--leading-tight);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+}
+
+.badge-text {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  line-height: var(--leading-tight);
+}
+
+/* Table Typography */
+.table-header {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: var(--leading-normal);
+  color: #374151;
+}
+
+.table-cell {
+  font-size: var(--text-sm);
+  font-weight: 400;
+  line-height: var(--leading-normal);
+}
+
+/* Toast and Alert Typography */
+.toast-title {
+  font-size: var(--text-base);
+  font-weight: 500;
+  line-height: var(--leading-snug);
+}
+
+.toast-message {
+  font-size: var(--text-sm);
+  font-weight: 400;
+  line-height: var(--leading-normal);
+}
+
+/* Responsive Typography */
+@media (max-width: 640px) {
+  .heading-1 { font-size: var(--text-3xl); }
+  .heading-2 { font-size: var(--text-2xl); }
+  .heading-3 { font-size: var(--text-xl); }
+  .heading-4 { font-size: var(--text-lg); }
+}
+
+@media (max-width: 480px) {
+  .heading-1 { font-size: var(--text-2xl); }
+  .heading-2 { font-size: var(--text-xl); }
+  .heading-3 { font-size: var(--text-lg); }
+}
+
+/* Print Typography */
+@media print {
+  body {
+    font-family: var(--font-primary);
+    font-size: 12pt;
+    line-height: 1.4;
+  }
+  
+  .heading-1, .heading-2, .heading-3, .heading-4 {
+    page-break-after: avoid;
+  }
+}
