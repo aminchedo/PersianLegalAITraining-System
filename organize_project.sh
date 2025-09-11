@@ -1,11 +1,13 @@
 #!/bin/bash
 
 # Persian Legal AI Project Organization Script
-# This script organizes the project structure according to best practices
+# This script organizes the messy project structure into a clean, maintainable format
+# Author: AI Assistant
+# Date: September 11, 2025
 
-set -e  # Exit on any error
+set -euo pipefail
 
-# Colors for output
+# Color definitions for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -14,219 +16,379 @@ PURPLE='\033[0;35m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# Configuration
-PROJECT_ROOT="/workspace"
-BACKUP_DIR="${PROJECT_ROOT}/backup_organization_$(date +%Y%m%d_%H%M%S)"
-LOG_FILE="${PROJECT_ROOT}/organization.log"
-REPORT_FILE="${PROJECT_ROOT}/organization_report.md"
-UNDO_SCRIPT="${PROJECT_ROOT}/undo_organization.sh"
-
-# Initialize log file
-echo "=== Persian Legal AI Project Organization Started at $(date) ===" > "$LOG_FILE"
+# Global variables
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BACKUP_DIR="${SCRIPT_DIR}/organization_backup_$(date +%Y%m%d_%H%M%S)"
+UNDO_SCRIPT="${SCRIPT_DIR}/undo_organization.sh"
+REPORT_FILE="${SCRIPT_DIR}/organization_report.md"
+MOVED_FILES=()
+FAILED_MOVES=()
+UNCATEGORIZED_FILES=()
 
 # Function to print colored output
-print_status() {
+print_color() {
     local color=$1
     local message=$2
     echo -e "${color}${message}${NC}"
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - $message" >> "$LOG_FILE"
 }
 
-# Function to create directory if it doesn't exist
-create_dir() {
-    local dir=$1
-    if [ ! -d "$dir" ]; then
-        mkdir -p "$dir"
-        print_status "$GREEN" "Created directory: $dir"
-    fi
+# Function to print section headers
+print_header() {
+    local message=$1
+    echo
+    print_color "$CYAN" "═══════════════════════════════════════════════════════════════"
+    print_color "$CYAN" "  $message"
+    print_color "$CYAN" "═══════════════════════════════════════════════════════════════"
+    echo
 }
 
-# Function to move file safely
-move_file() {
+# Function to print progress
+print_progress() {
+    local current=$1
+    local total=$2
+    local message=$3
+    local percentage=$((current * 100 / total))
+    print_color "$BLUE" "[$current/$total] ($percentage%) $message"
+}
+
+# Function to log file moves for undo script
+log_move() {
+    local source=$1
+    local destination=$2
+    echo "mv '$destination' '$source'" >> "$UNDO_SCRIPT"
+    MOVED_FILES+=("$source -> $destination")
+}
+
+# Function to safely move files
+safe_move() {
     local source=$1
     local destination=$2
     local description=$3
     
-    if [ -f "$source" ]; then
-        # Create destination directory if it doesn't exist
+    if [[ -f "$source" ]]; then
         local dest_dir=$(dirname "$destination")
-        create_dir "$dest_dir"
+        mkdir -p "$dest_dir"
         
-        # Move the file
-        mv "$source" "$destination"
-        print_status "$BLUE" "Moved: $source -> $destination ($description)"
-        
-        # Add to undo script
-        echo "mv \"$destination\" \"$source\"" >> "$UNDO_SCRIPT"
+        if mv "$source" "$destination" 2>/dev/null; then
+            print_color "$GREEN" "✓ Moved: $(basename "$source") → $dest_dir/"
+            log_move "$source" "$destination"
+            return 0
+        else
+            print_color "$RED" "✗ Failed to move: $source"
+            FAILED_MOVES+=("$source: $description")
+            return 1
+        fi
     else
-        print_status "$YELLOW" "File not found: $source"
+        print_color "$YELLOW" "⚠ File not found: $source"
+        return 1
     fi
 }
 
-# Function to create .gitkeep file
-create_gitkeep() {
-    local dir=$1
-    if [ -d "$dir" ] && [ -z "$(ls -A "$dir" 2>/dev/null)" ]; then
-        touch "$dir/.gitkeep"
-        print_status "$CYAN" "Created .gitkeep in empty directory: $dir"
+# Function to create directory structure
+create_directory_structure() {
+    print_header "CREATING DIRECTORY STRUCTURE"
+    
+    local directories=(
+        "docs/reports"
+        "docs/guides"
+        "docs/analysis"
+        "docs/archive"
+        "tests/unit"
+        "tests/integration"
+        "tests/e2e"
+        "tests/fixtures"
+        "scripts/deployment"
+        "scripts/maintenance"
+        "scripts/utils"
+        "configs/development"
+        "configs/production"
+        "configs/testing"
+        "backup/databases"
+        "backup/configs"
+        "backup/logs"
+    )
+    
+    local total=${#directories[@]}
+    local current=0
+    
+    for dir in "${directories[@]}"; do
+        current=$((current + 1))
+        print_progress "$current" "$total" "Creating directory: $dir"
+        mkdir -p "$dir"
+        
+        # Create .gitkeep files in empty directories
+        if [[ ! "$(ls -A "$dir" 2>/dev/null)" ]]; then
+            touch "$dir/.gitkeep"
+            print_color "$YELLOW" "  Created .gitkeep in $dir"
+        fi
+    done
+    
+    print_color "$GREEN" "✓ Directory structure created successfully!"
+}
+
+# Function to create git backup
+create_git_backup() {
+    print_header "CREATING GIT BACKUP"
+    
+    if command -v git &> /dev/null && [[ -d .git ]]; then
+        print_color "$BLUE" "Creating git stash backup..."
+        git add . 2>/dev/null || true
+        git stash push -m "Pre-organization backup $(date)" 2>/dev/null || true
+        print_color "$GREEN" "✓ Git backup created (stashed)"
+        
+        # Also create a commit backup
+        git add . 2>/dev/null || true
+        git commit -m "Pre-organization backup $(date)" 2>/dev/null || true
+        print_color "$GREEN" "✓ Commit backup created"
+    else
+        print_color "$YELLOW" "⚠ Git not available or not a git repository"
+        print_color "$BLUE" "Creating file system backup instead..."
+        mkdir -p "$BACKUP_DIR"
+        cp -r . "$BACKUP_DIR" 2>/dev/null || true
+        print_color "$GREEN" "✓ File system backup created at: $BACKUP_DIR"
+    fi
+}
+
+# Function to organize markdown files
+organize_markdown_files() {
+    print_header "ORGANIZING MARKDOWN FILES"
+    
+    # Report files (contain REPORT in filename)
+    local report_files=(
+        "BOLT_INTEGRATION_COMPLETE.md"
+        "CLEANUP_SUMMARY.md"
+        "MERGE_COMPLETION_REPORT.md"
+        "PERSIAN_AI_ENHANCEMENT_COMPLETION_REPORT.md"
+        "PERSIAN_LEGAL_AI_AUDIT_COMPLETION_REPORT.md"
+        "PHASE_3_COMPLETION_SUMMARY.md"
+        "PHASE_CRITICAL_PRODUCTION_ISSUES_RESOLVED.md"
+        "RECOVERY_REPORT.md"
+        "SAFE_MERGE_COMPLETION_REPORT.md"
+        "VISUAL_UI_TEST_REPORT.md"
+        "integration-report.md"
+    )
+    
+    # Guide files (contain GUIDE in filename or are guides)
+    local guide_files=(
+        "DEPLOYMENT_GUIDE.md"
+        "START_SYSTEM.md"
+        "backend-implementation-guide.md"
+    )
+    
+    # Analysis files
+    local analysis_files=(
+        "BACKEND_MAIN_FILES_ANALYSIS.md"
+        "analysis_report.txt"
+    )
+    
+    print_color "$BLUE" "Moving report files..."
+    local current=0
+    local total=$((${#report_files[@]} + ${#guide_files[@]} + ${#analysis_files[@]}))
+    
+    for file in "${report_files[@]}"; do
+        current=$((current + 1))
+        print_progress "$current" "$total" "Processing report: $file"
+        safe_move "$file" "docs/reports/$file" "Report file"
+    done
+    
+    print_color "$BLUE" "Moving guide files..."
+    for file in "${guide_files[@]}"; do
+        current=$((current + 1))
+        print_progress "$current" "$total" "Processing guide: $file"
+        safe_move "$file" "docs/guides/$file" "Guide file"
+    done
+    
+    print_color "$BLUE" "Moving analysis files..."
+    for file in "${analysis_files[@]}"; do
+        current=$((current + 1))
+        print_progress "$current" "$total" "Processing analysis: $file"
+        safe_move "$file" "docs/analysis/$file" "Analysis file"
+    done
+}
+
+# Function to organize test files
+organize_test_files() {
+    print_header "ORGANIZING TEST FILES"
+    
+    # Test files mapping
+    local test_files=(
+        "test_frontend.html:tests/e2e/test_frontend.html"
+        "test_integration.py:tests/integration/test_integration.py"
+        "test_production_system.py:tests/integration/test_production_system.py"
+    )
+    
+    local current=0
+    local total=${#test_files[@]}
+    
+    for mapping in "${test_files[@]}"; do
+        current=$((current + 1))
+        local source="${mapping%%:*}"
+        local destination="${mapping##*:}"
+        print_progress "$current" "$total" "Processing test: $source"
+        safe_move "$source" "$destination" "Test file"
+    done
+    
+    # Look for additional test files with patterns
+    print_color "$BLUE" "Searching for additional test files..."
+    for file in test*.py *test*.py test*.js *test*.js test*.html *test*.html; do
+        if [[ -f "$file" ]] && [[ ! "$file" =~ ^tests/ ]]; then
+            local ext="${file##*.}"
+            case "$ext" in
+                py)
+                    safe_move "$file" "tests/integration/$file" "Python test file"
+                    ;;
+                js)
+                    safe_move "$file" "tests/e2e/$file" "JavaScript test file"
+                    ;;
+                html)
+                    safe_move "$file" "tests/e2e/$file" "HTML test file"
+                    ;;
+            esac
+        fi
+    done
+}
+
+# Function to organize script files
+organize_script_files() {
+    print_header "ORGANIZING SCRIPT FILES"
+    
+    # Specific script mappings
+    local script_mappings=(
+        "system_health_check.py:scripts/maintenance/system_health_check.py"
+        "start_system.py:scripts/start_system.py"
+        "dependency-analyzer.js:scripts/utils/dependency-analyzer.js"
+        "dependency-analyzer.ts:scripts/utils/dependency-analyzer.ts"
+        "backend-validator-simple.js:scripts/utils/backend-validator-simple.js"
+        "backend-validator.js:scripts/utils/backend-validator.js"
+        "route-updater.js:scripts/utils/route-updater.js"
+        "route-updater.ts:scripts/utils/route-updater.ts"
+    )
+    
+    local current=0
+    local total=${#script_mappings[@]}
+    
+    for mapping in "${script_mappings[@]}"; do
+        current=$((current + 1))
+        local source="${mapping%%:*}"
+        local destination="${mapping##*:}"
+        print_progress "$current" "$total" "Processing script: $source"
+        safe_move "$source" "$destination" "Script file"
+    done
+    
+    # Move all .sh files to scripts/
+    print_color "$BLUE" "Moving shell scripts..."
+    for file in *.sh; do
+        if [[ -f "$file" ]] && [[ "$file" != "organize_project.sh" ]] && [[ "$file" != "undo_organization.sh" ]]; then
+            case "$file" in
+                *deploy*|*production*|*merge*)
+                    safe_move "$file" "scripts/deployment/$file" "Deployment script"
+                    ;;
+                *health*|*maintenance*|*recovery*)
+                    safe_move "$file" "scripts/maintenance/$file" "Maintenance script"
+                    ;;
+                *)
+                    safe_move "$file" "scripts/$file" "Shell script"
+                    ;;
+            esac
+        fi
+    done
+}
+
+# Function to organize configuration files
+organize_config_files() {
+    print_header "ORGANIZING CONFIGURATION FILES"
+    
+    local config_mappings=(
+        "docker-compose.yml:configs/development/docker-compose.yml"
+        "docker-compose.production.yml:configs/production/docker-compose.production.yml"
+    )
+    
+    local current=0
+    local total=${#config_mappings[@]}
+    
+    for mapping in "${config_mappings[@]}"; do
+        current=$((current + 1))
+        local source="${mapping%%:*}"
+        local destination="${mapping##*:}"
+        print_progress "$current" "$total" "Processing config: $source"
+        safe_move "$source" "$destination" "Configuration file"
+    done
+}
+
+# Function to organize database files
+organize_database_files() {
+    print_header "ORGANIZING DATABASE FILES"
+    
+    local db_files=(
+        "persian_legal_ai.db"
+    )
+    
+    local current=0
+    local total=${#db_files[@]}
+    
+    for file in "${db_files[@]}"; do
+        current=$((current + 1))
+        print_progress "$current" "$total" "Processing database: $file"
+        safe_move "$file" "backup/databases/$file" "Database file"
+    done
+    
+    # Look for additional database files
+    print_color "$BLUE" "Searching for additional database files..."
+    for file in *.db *.sqlite *.sqlite3; do
+        if [[ -f "$file" ]] && [[ ! "$file" =~ ^backup/ ]]; then
+            safe_move "$file" "backup/databases/$file" "Database file"
+        fi
+    done
+}
+
+# Function to check for uncategorized files
+check_uncategorized_files() {
+    print_header "CHECKING FOR UNCATEGORIZED FILES"
+    
+    local extensions=("*.md" "*.py" "*.js" "*.ts" "*.sh" "*.db" "*.sqlite" "*.sqlite3" "*.html" "*.css" "*.json" "*.yml" "*.yaml")
+    
+    for pattern in "${extensions[@]}"; do
+        for file in $pattern; do
+            if [[ -f "$file" ]] && [[ "$file" != "README.md" ]] && [[ "$file" != "organize_project.sh" ]] && [[ "$file" != "undo_organization.sh" ]] && [[ "$file" != "organization_report.md" ]]; then
+                UNCATEGORIZED_FILES+=("$file")
+                print_color "$YELLOW" "⚠ Uncategorized: $file"
+            fi
+        done
+    done
+    
+    if [[ ${#UNCATEGORIZED_FILES[@]} -eq 0 ]]; then
+        print_color "$GREEN" "✓ All relevant files have been categorized!"
     fi
 }
 
 # Function to generate directory tree
-generate_tree() {
-    local output_file=$1
-    echo "```" > "$output_file"
-    tree -a -I '.git|node_modules|__pycache__|*.pyc|.DS_Store' >> "$output_file" 2>/dev/null || find . -type d | sed 's|[^/]*/|- |g' >> "$output_file"
-    echo "```" >> "$output_file"
+generate_directory_tree() {
+    print_header "CURRENT DIRECTORY STRUCTURE"
+    
+    if command -v tree &> /dev/null; then
+        tree -I 'node_modules|__pycache__|*.pyc|.git' --dirsfirst
+    else
+        print_color "$YELLOW" "⚠ 'tree' command not available, using ls instead"
+        find . -type d -not -path '*/\.*' -not -path '*/node_modules*' -not -path '*/__pycache__*' | sort | sed 's/[^-][^\/]*\// |/g; s/|\([^ ]\)/|-\1/'
+    fi
 }
 
-print_status "$PURPLE" "🚀 Starting Persian Legal AI Project Organization"
-print_status "$CYAN" "Project Root: $PROJECT_ROOT"
-print_status "$CYAN" "Backup Directory: $BACKUP_DIR"
-
-# Step 1: Create git backup
-print_status "$YELLOW" "📦 Creating git backup..."
-if [ -d "${PROJECT_ROOT}/.git" ]; then
-    git add -A
-    git commit -m "Pre-organization backup - $(date)" || print_status "$YELLOW" "No changes to commit"
-    print_status "$GREEN" "✅ Git backup completed"
-else
-    print_status "$YELLOW" "⚠️  No git repository found, skipping git backup"
-fi
-
-# Step 2: Create backup directory structure
-print_status "$YELLOW" "📁 Creating backup directory..."
-create_dir "$BACKUP_DIR"
-
-# Step 3: Initialize undo script
-print_status "$YELLOW" "🔄 Creating undo script..."
-cat > "$UNDO_SCRIPT" << 'EOF'
-#!/bin/bash
-# Undo script for Persian Legal AI Project Organization
-# Generated automatically - DO NOT EDIT MANUALLY
-
-echo "🔄 Reversing project organization..."
-
-EOF
-chmod +x "$UNDO_SCRIPT"
-
-# Step 4: Create new directory structure
-print_status "$YELLOW" "🏗️  Creating new directory structure..."
-
-# Main directories
-create_dir "${PROJECT_ROOT}/docs/reports"
-create_dir "${PROJECT_ROOT}/docs/guides"
-create_dir "${PROJECT_ROOT}/docs/analysis"
-create_dir "${PROJECT_ROOT}/docs/archive"
-
-create_dir "${PROJECT_ROOT}/tests/unit"
-create_dir "${PROJECT_ROOT}/tests/integration"
-create_dir "${PROJECT_ROOT}/tests/e2e"
-create_dir "${PROJECT_ROOT}/tests/fixtures"
-
-create_dir "${PROJECT_ROOT}/scripts/deployment"
-create_dir "${PROJECT_ROOT}/scripts/maintenance"
-create_dir "${PROJECT_ROOT}/scripts/utils"
-
-create_dir "${PROJECT_ROOT}/configs/development"
-create_dir "${PROJECT_ROOT}/configs/production"
-create_dir "${PROJECT_ROOT}/configs/testing"
-
-create_dir "${PROJECT_ROOT}/backup/databases"
-create_dir "${PROJECT_ROOT}/backup/configs"
-create_dir "${PROJECT_ROOT}/backup/logs"
-
-# Step 5: Move files according to rules
-print_status "$YELLOW" "📋 Moving files according to organization rules..."
-
-# Move REPORT files to docs/reports/
-print_status "$BLUE" "📊 Moving report files..."
-move_file "${PROJECT_ROOT}/BOLT_INTEGRATION_COMPLETE.md" "${PROJECT_ROOT}/docs/reports/BOLT_INTEGRATION_COMPLETE.md" "Report file"
-move_file "${PROJECT_ROOT}/CLEANUP_SUMMARY.md" "${PROJECT_ROOT}/docs/reports/CLEANUP_SUMMARY.md" "Report file"
-move_file "${PROJECT_ROOT}/MERGE_COMPLETION_REPORT.md" "${PROJECT_ROOT}/docs/reports/MERGE_COMPLETION_REPORT.md" "Report file"
-move_file "${PROJECT_ROOT}/PERSIAN_AI_ENHANCEMENT_COMPLETION_REPORT.md" "${PROJECT_ROOT}/docs/reports/PERSIAN_AI_ENHANCEMENT_COMPLETION_REPORT.md" "Report file"
-move_file "${PROJECT_ROOT}/PERSIAN_LEGAL_AI_AUDIT_COMPLETION_REPORT.md" "${PROJECT_ROOT}/docs/reports/PERSIAN_LEGAL_AI_AUDIT_COMPLETION_REPORT.md" "Report file"
-move_file "${PROJECT_ROOT}/PHASE_3_COMPLETION_SUMMARY.md" "${PROJECT_ROOT}/docs/reports/PHASE_3_COMPLETION_SUMMARY.md" "Report file"
-move_file "${PROJECT_ROOT}/PHASE_CRITICAL_PRODUCTION_ISSUES_RESOLVED.md" "${PROJECT_ROOT}/docs/reports/PHASE_CRITICAL_PRODUCTION_ISSUES_RESOLVED.md" "Report file"
-move_file "${PROJECT_ROOT}/RECOVERY_REPORT.md" "${PROJECT_ROOT}/docs/reports/RECOVERY_REPORT.md" "Report file"
-move_file "${PROJECT_ROOT}/SAFE_MERGE_COMPLETION_REPORT.md" "${PROJECT_ROOT}/docs/reports/SAFE_MERGE_COMPLETION_REPORT.md" "Report file"
-move_file "${PROJECT_ROOT}/VISUAL_UI_TEST_REPORT.md" "${PROJECT_ROOT}/docs/reports/VISUAL_UI_TEST_REPORT.md" "Report file"
-move_file "${PROJECT_ROOT}/integration-report.md" "${PROJECT_ROOT}/docs/reports/integration-report.md" "Report file"
-
-# Move GUIDE files to docs/guides/
-print_status "$BLUE" "📖 Moving guide files..."
-move_file "${PROJECT_ROOT}/DEPLOYMENT_GUIDE.md" "${PROJECT_ROOT}/docs/guides/DEPLOYMENT_GUIDE.md" "Guide file"
-move_file "${PROJECT_ROOT}/START_SYSTEM.md" "${PROJECT_ROOT}/docs/guides/START_SYSTEM.md" "Guide file"
-move_file "${PROJECT_ROOT}/backend-implementation-guide.md" "${PROJECT_ROOT}/docs/guides/backend-implementation-guide.md" "Guide file"
-
-# Move analysis files to docs/analysis/
-print_status "$BLUE" "🔍 Moving analysis files..."
-move_file "${PROJECT_ROOT}/BACKEND_MAIN_FILES_ANALYSIS.md" "${PROJECT_ROOT}/docs/analysis/BACKEND_MAIN_FILES_ANALYSIS.md" "Analysis file"
-move_file "${PROJECT_ROOT}/analysis_report.txt" "${PROJECT_ROOT}/docs/analysis/analysis_report.txt" "Analysis file"
-
-# Move test files to tests/
-print_status "$BLUE" "🧪 Moving test files..."
-move_file "${PROJECT_ROOT}/test_frontend.html" "${PROJECT_ROOT}/tests/e2e/test_frontend.html" "E2E test file"
-move_file "${PROJECT_ROOT}/test_integration.py" "${PROJECT_ROOT}/tests/integration/test_integration.py" "Integration test file"
-move_file "${PROJECT_ROOT}/test_production_system.py" "${PROJECT_ROOT}/tests/integration/test_production_system.py" "Integration test file"
-
-# Move script files to scripts/
-print_status "$BLUE" "🔧 Moving script files..."
-move_file "${PROJECT_ROOT}/check-bolt-endpoints.sh" "${PROJECT_ROOT}/scripts/utils/check-bolt-endpoints.sh" "Utility script"
-move_file "${PROJECT_ROOT}/comprehensive-test.sh" "${PROJECT_ROOT}/scripts/utils/comprehensive-test.sh" "Utility script"
-move_file "${PROJECT_ROOT}/fix-imports.sh" "${PROJECT_ROOT}/scripts/utils/fix-imports.sh" "Utility script"
-move_file "${PROJECT_ROOT}/fix-quotes.sh" "${PROJECT_ROOT}/scripts/utils/fix-quotes.sh" "Utility script"
-move_file "${PROJECT_ROOT}/persian_legal_ai_recovery.sh" "${PROJECT_ROOT}/scripts/maintenance/persian_legal_ai_recovery.sh" "Maintenance script"
-move_file "${PROJECT_ROOT}/safe-merge-to-main.sh" "${PROJECT_ROOT}/scripts/deployment/safe-merge-to-main.sh" "Deployment script"
-move_file "${PROJECT_ROOT}/safe-merge.sh" "${PROJECT_ROOT}/scripts/deployment/safe-merge.sh" "Deployment script"
-move_file "${PROJECT_ROOT}/smart-analysis.sh" "${PROJECT_ROOT}/scripts/utils/smart-analysis.sh" "Utility script"
-move_file "${PROJECT_ROOT}/smart-migration.sh" "${PROJECT_ROOT}/scripts/utils/smart-migration.sh" "Utility script"
-
-# Move Python utility scripts
-move_file "${PROJECT_ROOT}/system_health_check.py" "${PROJECT_ROOT}/scripts/maintenance/system_health_check.py" "Maintenance script"
-move_file "${PROJECT_ROOT}/start_system.py" "${PROJECT_ROOT}/scripts/start_system.py" "System script"
-
-# Move JavaScript/TypeScript utility files
-move_file "${PROJECT_ROOT}/backend-validator-simple.js" "${PROJECT_ROOT}/scripts/utils/backend-validator-simple.js" "Utility script"
-move_file "${PROJECT_ROOT}/backend-validator.js" "${PROJECT_ROOT}/scripts/utils/backend-validator.js" "Utility script"
-move_file "${PROJECT_ROOT}/dependency-analyzer.js" "${PROJECT_ROOT}/scripts/utils/dependency-analyzer.js" "Utility script"
-move_file "${PROJECT_ROOT}/dependency-analyzer.ts" "${PROJECT_ROOT}/scripts/utils/dependency-analyzer.ts" "Utility script"
-move_file "${PROJECT_ROOT}/route-updater.js" "${PROJECT_ROOT}/scripts/utils/route-updater.js" "Utility script"
-move_file "${PROJECT_ROOT}/route-updater.ts" "${PROJECT_ROOT}/scripts/utils/route-updater.ts" "Utility script"
-
-# Move configuration files
-print_status "$BLUE" "⚙️  Moving configuration files..."
-move_file "${PROJECT_ROOT}/docker-compose.production.yml" "${PROJECT_ROOT}/configs/production/docker-compose.production.yml" "Production config"
-move_file "${PROJECT_ROOT}/docker-compose.yml" "${PROJECT_ROOT}/configs/development/docker-compose.yml" "Development config"
-
-# Move database files
-print_status "$BLUE" "🗄️  Moving database files..."
-move_file "${PROJECT_ROOT}/persian_legal_ai.db" "${PROJECT_ROOT}/backup/databases/persian_legal_ai.db" "Database file"
-
-# Step 6: Create .gitkeep files in empty directories
-print_status "$YELLOW" "📌 Creating .gitkeep files in empty directories..."
-create_gitkeep "${PROJECT_ROOT}/docs/archive"
-create_gitkeep "${PROJECT_ROOT}/tests/unit"
-create_gitkeep "${PROJECT_ROOT}/tests/fixtures"
-create_gitkeep "${PROJECT_ROOT}/scripts/deployment"
-create_gitkeep "${PROJECT_ROOT}/scripts/maintenance"
-create_gitkeep "${PROJECT_ROOT}/configs/testing"
-create_gitkeep "${PROJECT_ROOT}/backup/configs"
-create_gitkeep "${PROJECT_ROOT}/backup/logs"
-
-# Step 7: Generate organization report
-print_status "$YELLOW" "📊 Generating organization report..."
-
-cat > "$REPORT_FILE" << EOF
+# Function to generate report
+generate_report() {
+    print_header "GENERATING ORGANIZATION REPORT"
+    
+    cat > "$REPORT_FILE" << EOF
 # Persian Legal AI Project Organization Report
 
 **Generated on:** $(date)
-**Script Version:** 1.0
-**Project Root:** $PROJECT_ROOT
+**Script version:** 1.0
+**Total files processed:** $((${#MOVED_FILES[@]} + ${#FAILED_MOVES[@]} + ${#UNCATEGORIZED_FILES[@]}))
 
 ## Summary
 
-This report documents the organization of the Persian Legal AI project structure. All files have been moved according to best practices for project organization.
+- ✅ **Successfully moved:** ${#MOVED_FILES[@]} files
+- ❌ **Failed moves:** ${#FAILED_MOVES[@]} files  
+- ⚠️ **Uncategorized:** ${#UNCATEGORIZED_FILES[@]} files
 
 ## Directory Structure Created
 
@@ -259,118 +421,134 @@ backup/
 └── logs/          # Log files
 \`\`\`
 
-## Files Moved
-
-### Reports (docs/reports/)
-- BOLT_INTEGRATION_COMPLETE.md
-- CLEANUP_SUMMARY.md
-- MERGE_COMPLETION_REPORT.md
-- PERSIAN_AI_ENHANCEMENT_COMPLETION_REPORT.md
-- PERSIAN_LEGAL_AI_AUDIT_COMPLETION_REPORT.md
-- PHASE_3_COMPLETION_SUMMARY.md
-- PHASE_CRITICAL_PRODUCTION_ISSUES_RESOLVED.md
-- RECOVERY_REPORT.md
-- SAFE_MERGE_COMPLETION_REPORT.md
-- VISUAL_UI_TEST_REPORT.md
-- integration-report.md
-
-### Guides (docs/guides/)
-- DEPLOYMENT_GUIDE.md
-- START_SYSTEM.md
-- backend-implementation-guide.md
-
-### Analysis (docs/analysis/)
-- BACKEND_MAIN_FILES_ANALYSIS.md
-- analysis_report.txt
-
-### Tests
-- test_frontend.html → tests/e2e/
-- test_integration.py → tests/integration/
-- test_production_system.py → tests/integration/
-
-### Scripts
-- check-bolt-endpoints.sh → scripts/utils/
-- comprehensive-test.sh → scripts/utils/
-- fix-imports.sh → scripts/utils/
-- fix-quotes.sh → scripts/utils/
-- persian_legal_ai_recovery.sh → scripts/maintenance/
-- safe-merge-to-main.sh → scripts/deployment/
-- safe-merge.sh → scripts/deployment/
-- smart-analysis.sh → scripts/utils/
-- smart-migration.sh → scripts/utils/
-- system_health_check.py → scripts/maintenance/
-- start_system.py → scripts/
-- backend-validator-simple.js → scripts/utils/
-- backend-validator.js → scripts/utils/
-- dependency-analyzer.js → scripts/utils/
-- dependency-analyzer.ts → scripts/utils/
-- route-updater.js → scripts/utils/
-- route-updater.ts → scripts/utils/
-
-### Configuration Files
-- docker-compose.production.yml → configs/production/
-- docker-compose.yml → configs/development/
-
-### Database Files
-- persian_legal_ai.db → backup/databases/
-
-## Files Kept in Root
-- README.md (kept as requested)
-- main.py (core application file)
-- persian_main.py (core application file)
-- requirements.txt (Python dependencies)
-- project.json (project configuration)
-
-## Safety Measures
-- Git backup created before organization
-- Undo script generated: undo_organization.sh
-- All operations logged to: organization.log
-- No files were deleted, only moved
-
-## Current Directory Structure
+## Successfully Moved Files
 
 EOF
 
-# Generate current directory tree
-generate_tree "${REPORT_FILE}.tree"
-cat "${REPORT_FILE}.tree" >> "$REPORT_FILE"
-rm "${REPORT_FILE}.tree"
+    for move in "${MOVED_FILES[@]}"; do
+        echo "- $move" >> "$REPORT_FILE"
+    done
 
-# Add footer to report
-cat >> "$REPORT_FILE" << EOF
+    if [[ ${#FAILED_MOVES[@]} -gt 0 ]]; then
+        echo -e "\n## Failed Moves\n" >> "$REPORT_FILE"
+        for fail in "${FAILED_MOVES[@]}"; do
+            echo "- $fail" >> "$REPORT_FILE"
+        done
+    fi
 
-## Next Steps
-1. Review the new structure
-2. Update any hardcoded paths in your code
-3. Update documentation references
-4. Test that all scripts still work from their new locations
+    if [[ ${#UNCATEGORIZED_FILES[@]} -gt 0 ]]; then
+        echo -e "\n## Uncategorized Files\n" >> "$REPORT_FILE"
+        for uncat in "${UNCATEGORIZED_FILES[@]}"; do
+            echo "- $uncat" >> "$REPORT_FILE"
+        done
+    fi
 
-## Undo Instructions
-If you need to revert the organization, run:
-\`\`\`bash
-bash undo_organization.sh
-\`\`\`
+    echo -e "\n## Undo Instructions\n" >> "$REPORT_FILE"
+    echo "To undo this organization, run:" >> "$REPORT_FILE"
+    echo "\`\`\`bash" >> "$REPORT_FILE"
+    echo "bash undo_organization.sh" >> "$REPORT_FILE"
+    echo "\`\`\`" >> "$REPORT_FILE"
 
----
-*Report generated by organize_project.sh v1.0*
+    print_color "$GREEN" "✓ Report generated: $REPORT_FILE"
+}
+
+# Function to initialize undo script
+initialize_undo_script() {
+    cat > "$UNDO_SCRIPT" << 'EOF'
+#!/bin/bash
+# Undo script for Persian Legal AI project organization
+# This script will move files back to their original locations
+
+set -euo pipefail
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+print_color() {
+    local color=$1
+    local message=$2
+    echo -e "${color}${message}${NC}"
+}
+
+print_color "$YELLOW" "Starting undo process..."
+print_color "$RED" "WARNING: This will move files back to root level!"
+read -p "Are you sure you want to continue? (y/N): " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    print_color "$YELLOW" "Undo cancelled."
+    exit 0
+fi
+
+print_color "$YELLOW" "Undoing file organization..."
+
 EOF
 
-# Step 8: Finalize undo script
-cat >> "$UNDO_SCRIPT" << EOF
+    chmod +x "$UNDO_SCRIPT"
+}
 
-echo "✅ Organization reversal completed!"
-echo "📁 You may need to manually remove empty directories if desired."
+# Main execution function
+main() {
+    print_color "$PURPLE" "Persian Legal AI Project Organization Script"
+    print_color "$PURPLE" "=========================================="
+    echo
+    print_color "$BLUE" "This script will organize your project structure safely."
+    print_color "$BLUE" "A backup will be created and an undo script will be generated."
+    echo
+    
+    read -p "Do you want to proceed? (y/N): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        print_color "$YELLOW" "Organization cancelled."
+        exit 0
+    fi
+    
+    # Initialize undo script
+    initialize_undo_script
+    
+    # Create git backup
+    create_git_backup
+    
+    # Create directory structure
+    create_directory_structure
+    
+    # Organize files by category
+    organize_markdown_files
+    organize_test_files
+    organize_script_files
+    organize_config_files
+    organize_database_files
+    
+    # Check for uncategorized files
+    check_uncategorized_files
+    
+    # Finalize undo script
+    cat >> "$UNDO_SCRIPT" << 'EOF'
+
+print_color "$GREEN" "✓ Undo completed successfully!"
+print_color "$YELLOW" "Note: Empty directories were not removed automatically."
+print_color "$YELLOW" "You may want to clean them up manually if needed."
 EOF
+    
+    # Generate report
+    generate_report
+    
+    # Show final structure
+    generate_directory_tree
+    
+    # Final summary
+    print_header "ORGANIZATION COMPLETE!"
+    print_color "$GREEN" "✅ Project organization completed successfully!"
+    print_color "$BLUE" "📁 Files moved: ${#MOVED_FILES[@]}"
+    print_color "$RED" "❌ Failed moves: ${#FAILED_MOVES[@]}"
+    print_color "$YELLOW" "⚠️ Uncategorized: ${#UNCATEGORIZED_FILES[@]}"
+    echo
+    print_color "$CYAN" "📋 Detailed report: $REPORT_FILE"
+    print_color "$CYAN" "🔄 Undo script: $UNDO_SCRIPT"
+    echo
+    print_color "$GREEN" "Your Persian Legal AI project is now properly organized! 🎉"
+}
 
-# Step 9: Display final results
-print_status "$GREEN" "🎉 Project organization completed successfully!"
-print_status "$CYAN" "📊 Organization report: $REPORT_FILE"
-print_status "$CYAN" "🔄 Undo script: $UNDO_SCRIPT"
-print_status "$CYAN" "📝 Log file: $LOG_FILE"
-
-# Display current directory structure
-print_status "$PURPLE" "📁 Current project structure:"
-tree -a -I '.git|node_modules|__pycache__|*.pyc|.DS_Store|backup_*' -L 3 2>/dev/null || find . -maxdepth 3 -type d | sed 's|[^/]*/|- |g'
-
-print_status "$GREEN" "✅ All done! Your Persian Legal AI project is now properly organized."
-print_status "$YELLOW" "💡 Don't forget to update any hardcoded paths in your code!"
+# Run the main function
+main "$@"
