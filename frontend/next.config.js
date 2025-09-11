@@ -66,7 +66,7 @@ const nextConfig = {
   },
   
   // Vercel-optimized build settings
-  output: process.env.VERCEL ? 'export' : 'standalone',
+  output: 'standalone',
   distDir: '.next',
   generateEtags: false,
   compress: true,
@@ -75,7 +75,6 @@ const nextConfig = {
   
   // Performance optimizations
   experimental: {
-    optimizeCss: true,
     optimizePackageImports: ['@ant-design/icons', 'lucide-react']
   },
   
