@@ -28,8 +28,5 @@
   "env": {
     "NEXT_PUBLIC_API_URL": "https://persian-legal-ai-backend.railway.app",
     "NODE_ENV": "production"
-  },
-  "installCommand": "cd frontend && npm install",
-  "buildCommand": "cd frontend && npm run build",
-  "outputDirectory": "frontend/.next"
+  }
 }
