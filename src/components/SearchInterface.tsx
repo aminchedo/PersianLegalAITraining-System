@@ -5,8 +5,8 @@ import type { Document } from '../types';
 import { debounce } from 'lodash';
 
 interface SearchInterfaceProps {
-  onDocumentSelect: (id: number) => void;
-  selectedDocumentId?: number | null;
+  onDocumentSelect: (id: string) => void;
+  selectedDocumentId?: string | null;
 }
 
 const SearchInterface: React.FC<SearchInterfaceProps> = ({ 
@@ -199,14 +199,14 @@ const SearchInterface: React.FC<SearchInterfaceProps> = ({
                     
                     {/* Document snippet */}
                     <p className="text-gray-600 mb-3 line-clamp-3">
-                      {truncateText(document.content)}
+                      {document.content ? truncateText(document.content) : 'محتوای سند در دسترس نیست'}
                     </p>
                     
                     {/* Document metadata */}
                     <div className="flex items-center gap-4 text-sm text-gray-500">
                       <div className="flex items-center gap-1">
                         <Clock className="w-4 h-4" />
-                        {formatDate(document.scraped_at)}
+{document.scraped_at ? formatDate(document.scraped_at) : 'تاریخ نامشخص'}
                       </div>
                       
                       {document.category && (

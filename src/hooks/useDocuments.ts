@@ -11,7 +11,7 @@ export const useDocuments = (query?: string, category?: string) => {
   });
 };
 
-export const useDocument = (id: number) => {
+export const useDocument = (id: string) => {
   return useQuery({
     queryKey: ['document', id],
     queryFn: () => apiService.getDocument(id),
@@ -62,7 +62,7 @@ export const useStopScraping = () => {
 export const useClassifyDocument = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (documentId: number) => apiService.classifyDocument(documentId),
+    mutationFn: (documentId: string) => apiService.classifyDocument(documentId),
     onSuccess: (_, documentId) => {
       queryClient.invalidateQueries({ queryKey: ['document', documentId] });
       queryClient.invalidateQueries({ queryKey: ['documents'] });

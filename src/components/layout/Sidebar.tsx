@@ -7,7 +7,7 @@ import { motion } from 'framer-motion'
 import {
   HomeIcon,
   DocumentTextIcon,
-  BrainIcon,
+  CpuChipIcon,
   ChartBarIcon,
   CogIcon,
   AcademicCapIcon,
@@ -16,7 +16,6 @@ import {
   CloudArrowUpIcon,
   ClockIcon,
   UsersIcon,
-  CpuChipIcon,
   ArrowTrendingUpIcon,
   DocumentChartBarIcon,
   Cog6ToothIcon,
@@ -53,9 +52,9 @@ const navigation: NavigationItem[] = [
   {
     name: 'طبقه‌بندی هوشمند',
     href: '/classification',
-    icon: BrainIcon,
+    icon: CpuChipIcon,
     children: [
-      { name: 'طبقه‌بندی متن', href: '/classification', icon: BrainIcon },
+      { name: 'طبقه‌بندی متن', href: '/classification', icon: CpuChipIcon },
       { name: 'پردازش دسته‌ای', href: '/classification/batch', icon: CpuChipIcon },
       { name: 'تاریخچه طبقه‌بندی', href: '/classification/history', icon: ClockIcon }
     ]

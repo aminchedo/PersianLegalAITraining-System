@@ -18,7 +18,7 @@ interface AuthContextType {
   isAuthenticated: boolean
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -26,9 +26,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Check for stored user session
-    const storedUser = localStorage.getItem('user')
-    if (storedUser) {
-      setUser(JSON.parse(storedUser))
+    if (typeof window !== 'undefined') {
+      const storedUser = localStorage.getItem('user')
+      if (storedUser) {
+        setUser(JSON.parse(storedUser))
+      }
     }
     setIsLoading(false)
   }, [])
@@ -46,7 +48,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       setUser(mockUser)
-      localStorage.setItem('user', JSON.stringify(mockUser))
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('user', JSON.stringify(mockUser))
+      }
     } catch (error) {
       throw new Error('خطا در ورود')
     } finally {
@@ -56,7 +60,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     setUser(null)
-    localStorage.removeItem('user')
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('user')
+    }
   }
 
   const value: AuthContextType = {

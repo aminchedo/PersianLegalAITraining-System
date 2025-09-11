@@ -18,7 +18,7 @@ interface UsePaginationReturn {
   previousPage: () => void
   goToFirstPage: () => void
   goToLastPage: () => void
-  getPageNumbers: () => number[]
+  getPageNumbers: number[]
 }
 
 export function usePagination({

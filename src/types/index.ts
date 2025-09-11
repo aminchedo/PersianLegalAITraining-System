@@ -51,6 +51,12 @@ export interface Document extends BaseEntity {
   metadata: DocumentMetadata
   classification?: DocumentClassification
   processingHistory: ProcessingHistoryEntry[]
+  // Additional properties for scraped documents
+  scraped_at?: string
+  source?: string
+  category?: string
+  url?: string
+  content?: string
 }
 
 export type DocumentStatus = 'uploaded' | 'processing' | 'processed' | 'failed'
@@ -457,7 +463,7 @@ export interface SearchResult {
 }
 
 export interface SearchResponse {
-  results: SearchResult[]
+  documents: Document[]
   total: number
   aggregations?: Record<string, any>
   suggestions?: string[]
@@ -476,6 +482,28 @@ export interface SystemEvent {
 }
 
 export type EventType = 'user_action' | 'system_event' | 'error' | 'performance' | 'security'
+
+// Scraping types
+export interface ScrapingStatus {
+  is_running: boolean
+  documents_scraped: number
+  errors?: string[]
+  last_scrape_time?: string
+  current_source?: string
+  started_at?: string
+}
+
+// Constants
+export const IRANIAN_LEGAL_SOURCES = {
+  'divan-edari': 'دیوان عدالت اداری',
+  'divanali': 'دیوان عالی کشور',
+  'qanoon': 'مرکز قوانین و مقررات',
+  'majlis': 'مجلس شورای اسلامی',
+  'dadgostari': 'دادگستری',
+  'other': 'سایر منابع'
+} as const;
+
+export type LegalSourceKey = keyof typeof IRANIAN_LEGAL_SOURCES;
 
 // Configuration types
 export interface AppConfig {

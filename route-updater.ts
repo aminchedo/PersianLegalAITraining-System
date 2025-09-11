@@ -131,7 +131,7 @@ import { boltApi } from '../api/boltApi';
 `;
 
     // Find navigation section and add Bolt navigation
-    const navSectionPattern = /نظارت سیستم.*?<\/button>/s;
+    const navSectionPattern = /نظارت سیستم[\s\S]*?<\/button>/;
     const navMatch = dashboardContent.match(navSectionPattern);
     
     if (navMatch) {

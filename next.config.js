@@ -3,7 +3,13 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   experimental: {
-    appDir: false,
+    // appDir option has been removed in Next.js 14
+  },
+  // Exclude conflicting directories from Next.js build
+  pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
+  typescript: {
+    // Ignore TypeScript errors in excluded directories during build
+    ignoreBuildErrors: false,
   },
   i18n: {
     locales: ['fa'],

@@ -66,7 +66,7 @@ export const ScrapingStatus: React.FC = () => {
             <span className="text-sm font-medium text-blue-800">سایت فعلی</span>
           </div>
           <p className="text-lg font-semibold text-blue-900">
-            {status?.current_site || 'هیچکدام'}
+            {status?.current_source || 'هیچکدام'}
           </p>
         </div>
 
@@ -98,16 +98,16 @@ export const ScrapingStatus: React.FC = () => {
       <div className="mb-6">
         <h3 className="text-lg font-medium text-gray-900 mb-3">انتخاب منابع</h3>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {IRANIAN_LEGAL_SOURCES.map((source) => (
-            <label key={source} className="flex items-center">
+          {Object.entries(IRANIAN_LEGAL_SOURCES).map(([key, label]) => (
+            <label key={key} className="flex items-center">
               <input
                 type="checkbox"
-                checked={selectedSources.includes(source)}
-                onChange={() => handleSourceToggle(source)}
+                checked={selectedSources.includes(key)}
+                onChange={() => handleSourceToggle(key)}
                 disabled={status?.is_running}
                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 ml-2"
               />
-              <span className="text-sm text-gray-700">{source}</span>
+              <span className="text-sm text-gray-700">{label}</span>
             </label>
           ))}
         </div>
@@ -142,7 +142,7 @@ export const ScrapingStatus: React.FC = () => {
             <h4 className="font-medium text-red-800">خطاها</h4>
           </div>
           <ul className="text-sm text-red-700 space-y-1">
-            {status.errors.map((error, index) => (
+            {status.errors.map((error: string, index: number) => (
               <li key={index} className="list-disc list-inside">
                 {error}
               </li>

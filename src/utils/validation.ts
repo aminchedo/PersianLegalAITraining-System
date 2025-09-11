@@ -51,7 +51,7 @@ export const textClassificationSchema = z.object({
 
 // Document upload schema
 export const documentUploadSchema = z.object({
-  file: z.instanceof(File, 'فایل انتخاب نشده است'),
+  file: z.instanceof(File, { message: 'فایل انتخاب نشده است' }),
   description: z.string().max(500, 'توضیحات نباید بیش از ۵۰۰ کاراکتر باشد').optional()
 })
 

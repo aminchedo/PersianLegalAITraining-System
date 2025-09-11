@@ -59,10 +59,7 @@ export function Alert({
   const IconComponent = iconMap[variant!]
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
+    <div
       className={clsx(alertVariants({ variant, className }))}
       {...props}
     >
@@ -93,7 +90,7 @@ export function Alert({
           </div>
         )}
       </div>
-    </motion.div>
+    </div>
   )
 }
 

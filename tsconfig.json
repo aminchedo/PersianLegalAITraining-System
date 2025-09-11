@@ -31,5 +31,15 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "frontend/**/*",
+    "persian-legal-ai-frontend/**/*",
+    "src/main.tsx",
+    "src/vite-env.d.ts",
+    "backend/**/*",
+    "scripts/**/*",
+    "tests/**/*",
+    "test/**/*"
+  ]
 }

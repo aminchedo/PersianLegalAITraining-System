@@ -7,9 +7,8 @@ import Button from '../src/components/ui/Button'
 import Badge from '../src/components/ui/Badge'
 import {
   DocumentTextIcon,
-  BrainIcon,
-  ChartBarIcon,
   CpuChipIcon,
+  ChartBarIcon,
   CloudArrowUpIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
@@ -233,7 +232,7 @@ export default function HomePage() {
               value="۸۷"
               change="+۵٪ نسبت به دیروز"
               changeType="positive"
-              icon={BrainIcon}
+              icon={CpuChipIcon}
             />
           </motion.div>
           
@@ -281,7 +280,7 @@ export default function HomePage() {
                 title="طبقه‌بندی متن"
                 description="متن حقوقی خود را وارد کنید و طبقه‌بندی دریافت کنید"
                 href="/classification"
-                icon={BrainIcon}
+                icon={CpuChipIcon}
               />
             </motion.div>
             

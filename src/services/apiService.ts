@@ -1,9 +1,9 @@
 import axios from 'axios';
-import type { Document, ScrapingStatus, ClassificationResult, SearchResult } from '../types';
+import type { Document, ScrapingStatus, ClassificationResult, SearchResponse } from '../types';
 
 // API client configuration
 const api = axios.create({
-  baseURL: import.meta.env.PROD 
+  baseURL: process.env.NODE_ENV === 'production' 
     ? 'https://your-api-domain.com/api' 
     : 'http://localhost:8000/api',
   timeout: 30000,
@@ -31,7 +31,7 @@ api.interceptors.response.use(
 );
 
 // Document search and retrieval
-const searchDocuments = async (query: string, category?: string, limit: number = 10, offset: number = 0): Promise<SearchResult> => {
+const searchDocuments = async (query: string, category?: string, limit: number = 10, offset: number = 0): Promise<SearchResponse> => {
   const params = new URLSearchParams({
     query,
     limit: limit.toString(),
@@ -46,7 +46,7 @@ const searchDocuments = async (query: string, category?: string, limit: number =
   return response.data;
 };
 
-const getDocument = async (id: number): Promise<Document> => {
+const getDocument = async (id: string): Promise<Document> => {
   const response = await api.get(`/documents/${id}`);
   return response.data;
 };
@@ -71,7 +71,7 @@ const stopScraping = async (): Promise<void> => {
 };
 
 // AI Classification
-const classifyDocument = async (documentId: number): Promise<ClassificationResult> => {
+const classifyDocument = async (documentId: string): Promise<ClassificationResult> => {
   const response = await api.post(`/documents/${documentId}/classify`);
   return response.data;
 };

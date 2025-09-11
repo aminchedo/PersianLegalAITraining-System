@@ -22,7 +22,7 @@ type TabType = 'search' | 'scraping' | 'analytics' | 'deployment' | 'settings';
 
 function App() {
   const [activeTab, setActiveTab] = useState<TabType>('search');
-  const [selectedDocumentId, setSelectedDocumentId] = useState<number | null>(null);
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
 
   const tabs = [
     { id: 'search' as TabType, name: 'جستجو', icon: Search },

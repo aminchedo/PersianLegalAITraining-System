@@ -8,10 +8,10 @@ import Button from '../../src/components/ui/Button'
 import Badge from '../../src/components/ui/Badge'
 import {
   DocumentTextIcon,
-  DownloadIcon,
+  ArrowDownTrayIcon,
   ShareIcon,
   TrashIcon,
-  PencilIcon,
+  PencilSquareIcon,
   EyeIcon,
 } from '@heroicons/react/24/outline'
 import { motion } from 'framer-motion'
@@ -101,13 +101,13 @@ export default function DocumentDetailPage() {
           </div>
           
           <div className="flex space-x-3 space-x-reverse">
-            <Button variant="outline" size="sm" leftIcon={<DownloadIcon className="h-4 w-4" />}>
+            <Button variant="outline" size="sm" leftIcon={<ArrowDownTrayIcon className="h-4 w-4" />}>
               دانلود
             </Button>
             <Button variant="outline" size="sm" leftIcon={<ShareIcon className="h-4 w-4" />}>
               اشتراک
             </Button>
-            <Button variant="outline" size="sm" leftIcon={<PencilIcon className="h-4 w-4" />}>
+            <Button variant="outline" size="sm" leftIcon={<PencilSquareIcon className="h-4 w-4" />}>
               ویرایش
             </Button>
             <Button variant="ghost" size="sm" leftIcon={<TrashIcon className="h-4 w-4" />}>

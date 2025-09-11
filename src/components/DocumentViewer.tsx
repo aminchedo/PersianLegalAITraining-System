@@ -3,7 +3,7 @@ import { X, ExternalLink, Tag, Clock, FileText, Sparkles } from 'lucide-react';
 import { useDocument, useClassifyDocument } from '../hooks/useDocuments';
 
 interface DocumentViewerProps {
-  documentId: number;
+  documentId: string;
   onClose: () => void;
 }
 
@@ -105,13 +105,13 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ documentId, onClose }) 
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4 text-gray-500" />
                   <span className="text-gray-600">تاریخ جمع‌آوری:</span>
-                  <span className="font-medium">{formatDate(document.scraped_at)}</span>
+                  <span className="font-medium">{document.scraped_at ? formatDate(document.scraped_at) : 'نامشخص'}</span>
                 </div>
                 
                 <div className="flex items-center gap-2">
                   <ExternalLink className="w-4 h-4 text-gray-500" />
                   <span className="text-gray-600">منبع:</span>
-                  <span className="font-medium">{document.source}</span>
+                  <span className="font-medium">{document.source || 'نامشخص'}</span>
                 </div>
                 
                 {document.category && (
@@ -136,6 +136,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ documentId, onClose }) 
                   {classifyMutation.isPending ? 'در حال دسته‌بندی...' : 'دسته‌بندی هوشمند'}
                 </button>
                 
+{document.url && (
                 <a
                   href={document.url}
                   target="_blank"
@@ -145,6 +146,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ documentId, onClose }) 
                   <ExternalLink className="w-4 h-4" />
                   مشاهده در سایت اصلی
                 </a>
+                )}
               </div>
             </div>
 
@@ -155,11 +157,13 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ documentId, onClose }) 
                 className="prose prose-lg max-w-none text-gray-800 leading-relaxed"
                 style={{ direction: 'rtl', textAlign: 'right' }}
               >
-                {document.content.split('\n').map((paragraph, index) => (
+                {document.content ? document.content.split('\n').map((paragraph, index) => (
                   <p key={index} className="mb-4">
                     {paragraph}
                   </p>
-                ))}
+                )) : (
+                  <p className="text-gray-500">محتوای سند در دسترس نیست</p>
+                )}
               </div>
             </div>
 

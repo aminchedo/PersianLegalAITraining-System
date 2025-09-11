@@ -71,7 +71,7 @@ a {
 
 /* Loading Spinner */
 .spinner {
-  @apply animate-spin rounded-full border-2 border-gray-300 border-t-primary-600;
+  @apply animate-spin rounded-full border-2 border-gray-300 border-t-blue-600;
 }
 
 /* Persian Number Formatting */

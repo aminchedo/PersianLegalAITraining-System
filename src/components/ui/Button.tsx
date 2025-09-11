@@ -60,9 +60,7 @@ export function Button({
   ...props
 }: ButtonProps) {
   return (
-    <motion.button
-      whileHover={{ scale: disabled || loading ? 1 : 1.02 }}
-      whileTap={{ scale: disabled || loading ? 1 : 0.98 }}
+    <button
       className={clsx(buttonVariants({ variant, size, fullWidth, className }))}
       disabled={disabled || loading}
       {...props}
@@ -77,7 +75,7 @@ export function Button({
       {rightIcon && !loading && (
         <span className="mr-2">{rightIcon}</span>
       )}
-    </motion.button>
+    </button>
   )
 }
 

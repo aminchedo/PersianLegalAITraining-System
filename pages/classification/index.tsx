@@ -8,7 +8,7 @@ import Badge from '../../src/components/ui/Badge'
 import Loading from '../../src/components/ui/Loading'
 import Alert from '../../src/components/ui/Alert'
 import {
-  BrainIcon,
+  CpuChipIcon,
   DocumentTextIcon,
   ClipboardDocumentIcon,
   SparklesIcon,
@@ -89,7 +89,7 @@ export default function ClassificationPage() {
         <div className="text-center">
           <div className="flex justify-center mb-6">
             <div className="p-4 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl">
-              <BrainIcon className="h-12 w-12 text-white" />
+              <CpuChipIcon className="h-12 w-12 text-white" />
             </div>
           </div>
           <h1 className="heading-1 text-gray-900">
