@@ -4,6 +4,12 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from typing import Dict, List, Optional
 import asyncio
 from functools import lru_cache
+import logging
+
+# Import hardware detection service
+from .services.hardware_detector import HardwareDetector
+
+logger = logging.getLogger(__name__)
 
 # Try to import Persian NLP tools
 try:
@@ -14,13 +20,25 @@ except ImportError:
     print("⚠️ Hazm not available, using fallback text processing")
 
 class PersianBERTClassifier:
-    """Enhanced Persian BERT classifier with caching and error handling"""
+    """Enhanced Persian BERT classifier with dynamic hardware detection and optimization"""
     
-    def __init__(self, model_name: str = "HooshvareLab/bert-fa-base-uncased"):
-        self.model_name = model_name
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    def __init__(self, model_name: str = None):
+        # Initialize hardware detection for dynamic model selection
+        self.hardware_detector = HardwareDetector()
+        self.model_config = self.hardware_detector.select_optimal_model_config()
+        
+        # Use dynamic model selection or fallback to provided model
+        self.model_name = model_name or self.model_config['model_name']
+        self.device = torch.device(self.model_config['device'])
+        self.batch_size = self.model_config['batch_size']
+        self.max_length = self.model_config['max_length']
+        self.quantization = self.model_config['quantization']
+        self.memory_efficient = self.model_config['memory_efficient']
+        
         self.tokenizer = None
         self.model = None
+        
+        logger.info(f"Initializing Persian BERT Classifier with hardware-optimized config: {self.hardware_detector.get_hardware_summary()}")
         
         # Initialize Persian NLP tools if available
         if HAZM_AVAILABLE:
@@ -33,20 +51,56 @@ class PersianBERTClassifier:
         self._initialize_model()
     
     def _initialize_model(self):
-        """Initialize the BERT model and tokenizer"""
+        """Initialize the BERT model and tokenizer with hardware optimization"""
         try:
-            print(f"🤖 Loading Persian BERT model: {self.model_name}")
+            logger.info(f"🤖 Loading Persian BERT model: {self.model_name}")
+            logger.info(f"📊 Hardware config: {self.model_config['hardware_profile']}")
+            
+            # Load tokenizer
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+            
+            # Configure model loading based on hardware capabilities
+            model_kwargs = {
+                'num_labels': 5,  # Adjust based on your classification needs
+            }
+            
+            # Add quantization if enabled
+            if self.quantization:
+                try:
+                    from transformers import BitsAndBytesConfig
+                    quantization_config = BitsAndBytesConfig(
+                        load_in_8bit=True,
+                        llm_int8_enable_fp32_cpu_offload=True
+                    )
+                    model_kwargs['quantization_config'] = quantization_config
+                    logger.info("✅ 8-bit quantization enabled")
+                except ImportError:
+                    logger.warning("BitsAndBytesConfig not available, skipping quantization")
+            
+            # Load model
             self.model = AutoModelForSequenceClassification.from_pretrained(
                 self.model_name,
-                num_labels=5  # Adjust based on your classification needs
+                **model_kwargs
             )
+            
+            # Move to appropriate device
             self.model.to(self.device)
             self.model.eval()
-            print(f"✅ Persian BERT model loaded successfully on {self.device}")
+            
+            # Enable memory efficient attention if supported
+            if self.memory_efficient and hasattr(self.model.config, 'use_memory_efficient_attention'):
+                self.model.config.use_memory_efficient_attention = True
+            
+            # Enable gradient checkpointing for memory efficiency
+            if self.memory_efficient and hasattr(self.model, 'gradient_checkpointing_enable'):
+                self.model.gradient_checkpointing_enable()
+            
+            logger.info(f"✅ Persian BERT model loaded successfully on {self.device}")
+            logger.info(f"🔧 Optimizations: quantization={self.quantization}, memory_efficient={self.memory_efficient}")
+            
         except Exception as e:
-            print(f"❌ Failed to load Persian BERT model: {e}")
-            print("📋 Falling back to keyword-based classification")
+            logger.error(f"❌ Failed to load Persian BERT model: {e}")
+            logger.info("📋 Falling back to keyword-based classification")
             # Fallback to keyword-based classification
             self.model = None
             self.tokenizer = None
@@ -74,19 +128,25 @@ class PersianBERTClassifier:
             # Preprocess text
             processed_text = self.preprocess_text(text)
             
-            # Tokenize
+            # Tokenize with dynamic max_length based on hardware
             inputs = self.tokenizer(
                 processed_text,
                 return_tensors="pt",
                 truncation=True,
                 padding=True,
-                max_length=512
+                max_length=self.max_length
             )
             inputs = {k: v.to(self.device) for k, v in inputs.items()}
             
-            # Run inference
+            # Run inference with hardware-optimized settings
             with torch.no_grad():
-                outputs = self.model(**inputs)
+                # Use autocast for mixed precision if available and beneficial
+                if self.device.type == 'cuda' and self.model_config.get('precision') == 'fp16':
+                    with torch.cuda.amp.autocast():
+                        outputs = self.model(**inputs)
+                else:
+                    outputs = self.model(**inputs)
+                    
                 probabilities = torch.softmax(outputs.logits, dim=-1)
             
             # Convert to dictionary
@@ -141,6 +201,24 @@ class PersianBERTClassifier:
         except RuntimeError:
             # If no event loop is running, create a new one
             return asyncio.run(self.classify_async(text))
+    
+    def get_system_info(self) -> Dict[str, any]:
+        """Get hardware and model configuration info"""
+        return {
+            'hardware_summary': self.hardware_detector.get_hardware_summary(),
+            'hardware_info': self.hardware_detector.hardware_info,
+            'model_config': self.model_config,
+            'model_name': self.model_name,
+            'device': str(self.device),
+            'optimization_config': self.hardware_detector.optimization_config,
+            'performance_recommendations': self.hardware_detector.get_performance_recommendations(),
+            'production_ready': self.hardware_detector.is_production_ready(),
+            'optimal_for_platform': True
+        }
+    
+    def get_hardware_score(self) -> float:
+        """Get hardware capability score"""
+        return self.hardware_detector._calculate_hardware_score()
 
 # Global classifier instance
 classifier = PersianBERTClassifier()

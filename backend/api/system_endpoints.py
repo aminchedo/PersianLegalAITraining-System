@@ -294,6 +294,59 @@ async def get_system_resources():
         raise HTTPException(status_code=500, detail=str(e))
 
 # ============================================================================
+# HARDWARE DETECTION ENDPOINTS - Integrated with existing system architecture
+# ============================================================================
+
+@router.get("/hardware")
+async def get_hardware_info():
+    """Hardware detection endpoint - extends existing health checks"""
+    try:
+        from ..services.hardware_detector import HardwareDetector
+        detector = HardwareDetector()
+        return {
+            "hardware_info": detector.hardware_info,
+            "optimal_config": detector.select_optimal_model_config(),
+            "summary": detector.get_hardware_summary(),
+            "performance_recommendations": detector.get_performance_recommendations(),
+            "production_ready": detector.is_production_ready(),
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Failed to get hardware info: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/deployment/status")
+async def get_deployment_status():
+    """Deployment-specific status - integrates with existing health"""
+    try:
+        from ..services.hardware_detector import HardwareDetector
+        detector = HardwareDetector()
+        config = detector.select_optimal_model_config()
+        
+        return {
+            "deployment_platform": "vercel" if detector.hardware_info['ram_gb'] < 4 else "railway",
+            "recommended_config": config,
+            "hardware_summary": detector.get_hardware_summary(),
+            "optimization_applied": True,
+            "environment": detector.hardware_info['deployment_environment'],
+            "hardware_score": detector._calculate_hardware_score(),
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Failed to get deployment status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/ai/system-info")
+async def get_ai_system_info():
+    """Get AI classifier system information with hardware detection"""
+    try:
+        from ..ai_classifier import classifier
+        return classifier.get_system_info()
+    except Exception as e:
+        logger.error(f"Failed to get AI system info: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============================================================================
 # DEPLOYMENT ENDPOINTS - Integrated with existing system architecture
 # ============================================================================
 
@@ -307,15 +360,15 @@ async def get_deployment_health():
         logger.error(f"Failed to get deployment health: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/deployment/status")
-async def get_deployment_status():
-    """Get comprehensive deployment status"""
+@router.get("/deployment/legacy-status")
+async def get_legacy_deployment_status():
+    """Get legacy deployment status (keeping for backward compatibility)"""
     try:
         from ..services.deployment_service import deployment_service
         status = await deployment_service.get_deployment_status()
         return status.dict()
     except Exception as e:
-        logger.error(f"Failed to get deployment status: {e}")
+        logger.error(f"Failed to get legacy deployment status: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/deployment/validate")

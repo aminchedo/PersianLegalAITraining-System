@@ -1,19 +1,49 @@
 [build]
 builder = "DOCKERFILE"
-dockerfilePath = "Dockerfile.production"
+dockerfilePath = "Dockerfile.backend"
+buildCommand = "docker build -f Dockerfile.backend -t persian-legal-ai-backend ."
 
 [deploy]
+startCommand = "cd backend && python -m uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1"
 healthcheckPath = "/api/system/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
+numReplicas = 1
 
-[[services]]
-name = "persian-legal-ai-backend"
-
-[services.variables]
+[variables]
 PORT = "8000"
-ENVIRONMENT = "production"
-DATABASE_URL = "sqlite:///persian_legal_ai.db"
-PERSIAN_BERT_MODEL = "HooshvareLab/bert-fa-base-uncased"
+PYTHON_VERSION = "3.9"
+WORKERS = "1"
+NODE_ENV = "production"
+
+# Hardware Detection Configuration
+MODEL_AUTO_DETECT = "true"
+MODEL_OPTIMIZATION = "true"
+ENABLE_DYNAMIC_CONFIG = "true"
+ENABLE_HARDWARE_DETECTION = "true"
+
+# Performance Configuration
+MAX_WORKERS = "1"
+MEMORY_LIMIT = "2GB"
+REQUEST_TIMEOUT = "60"
+ENABLE_CACHING = "true"
+
+# AI Model Configuration
+ENABLE_QUANTIZATION = "true"
+ENABLE_MEMORY_OPTIMIZATION = "true"
+ENABLE_GPU_OPTIMIZATION = "true"
+
+# Security Configuration
+CORS_ORIGINS = "https://persian-legal-ai-frontend.vercel.app,https://*.vercel.app"
+
+# Monitoring
 LOG_LEVEL = "INFO"
+ENABLE_MONITORING = "true"
+ENABLE_PERFORMANCE_TRACKING = "true"
+
+[environments.production]
+variables = { NODE_ENV = "production" }
+
+[environments.staging]
+variables = { NODE_ENV = "staging" }
